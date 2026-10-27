@@ -36,7 +36,7 @@ jobs:
       - name: 準備網站檔案
         run: |
           mkdir -p _site
-          cp -r index.html version.json assets _site/
+          cp -r index.html version.json assets dist _site/
       - uses: actions/configure-pages@v5
         with:
           enablement: true
@@ -66,4 +66,6 @@ jobs:
             const v=ctx.window.CHANGELOG[0];
             console.log('## '+v.title+'\n\n'+v.highlights.map(h=>'- '+h).join('\n'));
           ")
-          gh release create "v$VER" --title "v$VER" --notes "$NOTES" --target "$GITHUB_SHA"
+          cp "dist/共有物分割複丈費清冊.html" "共有物分割複丈費清冊_v$VER.html"
+          gh release create "v$VER" --title "v$VER" --notes "$NOTES" --target "$GITHUB_SHA" \
+            "共有物分割複丈費清冊_v$VER.html"

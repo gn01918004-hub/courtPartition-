@@ -55,20 +55,20 @@
           <label>施測費（全案，元）
             <input data-f="surveyFee" inputmode="numeric">
           </label>
-          <label>確定界址點費用（申請人負擔）
-            <input data-f="pointFee" inputmode="numeric" placeholder="0">
-          </label>
-          <label>捨去方式
-            <select data-f="roundMode">
-              <option value="final">最後一次捨去（同 Excel v2.1）</option>
-              <option value="parcel">每筆均分額先捨去，再依持分捨去</option>
-            </select>
+          <label>確定界址點數（每點 200 元，申請人負擔）
+            <input data-f="pointCount" inputmode="numeric" placeholder="0">
           </label>
           <label class="switch wide">
-            <input type="checkbox" data-f="halve">
+            <input type="checkbox" data-f="courtBased">
             <span class="track"></span>
-            法院確定判決等，規費減半
+            依法院確定判決（或同一效力文件）、調處結果申請
           </label>
+          <label class="switch wide">
+            <input type="checkbox" data-f="needSurvey">
+            <span class="track"></span>
+            需實地測量或確定界址點（不適用減半，原價計收）
+          </label>
+          <p class="wide halve-note" id="halveNote"></p>
         </div>
       </div>
 
@@ -92,9 +92,9 @@
 
     <section class="card">
       <h2><span class="dot"></span>各共有人應繳彙總</h2>
-      <p class="hint">同一人跨多筆地號已自動合併。勾選「申請人」並填寫已繳金額；餘數與界址點費用由「餘數負擔人」繳納。</p>
+      <p class="hint">同一人跨多筆地號已自動合併。指定申請人並填寫已繳金額；捨去後的差額與界址點費用一律由申請人負擔。</p>
       <div class="remainder-pick">
-        餘數負擔人：<select id="remainderTo"></select>
+        申請人：<select id="applicantSel"></select>
       </div>
       <div class="table-wrap"><table class="tbl" id="people"></table></div>
     </section>
@@ -110,7 +110,8 @@
         <li>依 114 年 7 月 17 日「研商登記機關受理囑託非屬建築物之位置與面積測量及部分共有人申辦共有物分割複丈案件之收費原則事宜」會議紀錄議題二辦理。</li>
         <li>各宗土地應徵之分割複丈規費（基本費及施測費）依分割證明文件之分割後土地筆數均分，由分割後土地所有權人繳納。</li>
         <li>分割後維持共有狀態之地號，再依各共有人持分比例分算應繳規費。</li>
-        <li>計算採無條件捨去法至整數，餘數部分由申請人繳納；確定分割界址點費用由申請人繳納。</li>
+        <li>計算採無條件捨去法至整數（依持分算到個人時一次捨去），餘數部分由申請人繳納；確定分割界址點費用（每點 200 元）由申請人繳納。</li>
+        <li>依土地複丈費及建築改良物測量費收費標準第 6 條，依法院確定判決或同一效力文件、調處結果申請，得依已核定測量成果辦理而無需實地測量者，按半數計收；需實地測量或確定界址點者原價計收。</li>
         <li>未會同申請之共有人，依內政部 90 年 6 月 22 日台（90）內地字第 9073215 號函註記欠繳複丈費。</li>
         <li>分割證明文件已載明複丈費繳納方式或申請人願繳納全額者，不適用本清冊。</li>
       </ol>

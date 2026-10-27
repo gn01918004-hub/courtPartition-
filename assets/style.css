@@ -177,7 +177,7 @@ main { display: grid; gap: 18px; }
 .tbl tfoot td { font-weight: 700; border-top: 1px solid var(--line-strong); border-bottom: 0; font-family: var(--mono); }
 .tbl tbody tr:hover { background: rgba(56, 225, 255, 0.04); }
 #people tr.bearer td:first-child b { color: var(--violet); }
-#people tr.bearer td:first-child b::after { content: " ★餘數"; font-size: 0.68rem; font-weight: 400; color: var(--violet); }
+#people tr.bearer td:first-child b::after { content: " ★申請人"; font-size: 0.68rem; font-weight: 400; color: var(--violet); }
 #people td.muted { font-size: 0.75rem; max-width: 220px; }
 .status { font-size: 0.72rem; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line-strong); white-space: nowrap; }
 .status.warn { color: var(--warn); border-color: rgba(255, 181, 71, 0.5); background: rgba(255, 181, 71, 0.08); }
@@ -269,3 +269,11 @@ dialog::backdrop { background: rgba(3, 5, 10, 0.7); backdrop-filter: blur(4px); 
 
 [hidden] { display: none !important; }
 main > *, .grid-2 > *, .parcels > * { min-width: 0; }
+
+.halve-note { margin: 0; font-size: 0.8rem; padding: 8px 12px; border-radius: 10px; color: #ffd9a0; background: rgba(255, 181, 71, 0.08); border: 1px solid rgba(255, 181, 71, 0.35); }
+.halve-note.on { color: #aef5d4; background: rgba(62, 230, 160, 0.08); border-color: rgba(62, 230, 160, 0.35); }
+.radio { display: inline-grid; place-items: center; cursor: pointer; }
+.radio input { position: absolute; opacity: 0; width: 0; height: 0; }
+.radio span { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--line-strong); transition: 0.15s; }
+.radio input:checked + span { border-color: var(--violet); background: radial-gradient(circle, var(--violet) 45%, transparent 50%); box-shadow: 0 0 10px rgba(139, 123, 255, 0.6); }
+.radio input:focus-visible + span { box-shadow: 0 0 0 3px rgba(139, 123, 255, 0.35); }

@@ -22,8 +22,8 @@
   function newCase() {
     return {
       id: uid(), caseNo: '', receiptNo: '', clerk: '',
-      baseFee: '', surveyFee: '', pointFee: '', halve: true, roundMode: 'final',
-      parcels: [blankParcel()], persons: {}, remainderTo: '',
+      baseFee: '', surveyFee: '', pointCount: '', courtBased: true, needSurvey: false,
+      parcels: [blankParcel()], persons: {}, applicant: '',
       updatedAt: Date.now(),
     };
   }
@@ -33,10 +33,24 @@
     const owners = ['劉玉英', '劉玉美', '劉玉春', '劉筱帆'].map((name) => ({ name, den: 4, num: 1, note: '' }));
     return Object.assign(newCase(), {
       caseNo: '（範例）114年度訴字第0000號', receiptNo: '114年通數土字第00000號',
-      baseFee: 3000, surveyFee: 1500, halve: true,
+      baseFee: 3000, surveyFee: 1500, courtBased: true, needSurvey: false, applicant: '劉玉美',
       parcels: [{ landNo: '566', owners }],
-      persons: { '劉玉美': { applicant: true, paid: 3500, note: '' } },
+      persons: { '劉玉美': { paid: 3500, note: '' } },
     });
+  }
+
+  // 舊版（v3.0）案件資料轉換
+  function migrate(c) {
+    if (c.courtBased === undefined) c.courtBased = c.halve ?? true;
+    if (c.needSurvey === undefined) c.needSurvey = false;
+    if (c.applicant === undefined) {
+      const hit = Object.entries(c.persons || {}).find(([, v]) => v && v.applicant);
+      c.applicant = c.remainderTo || (hit ? hit[0] : '');
+    }
+    if (c.pointCount === undefined) c.pointCount = c.pointFee ? String(Math.round(Number(c.pointFee) / Calc.POINT_UNIT)) : '';
+    delete c.halve; delete c.roundMode; delete c.remainderTo; delete c.pointFee;
+    Object.values(c.persons || {}).forEach((v) => v && delete v.applicant);
+    return c;
   }
 
   // ---------- 儲存 ----------
@@ -44,7 +58,10 @@
   function load() {
     try {
       const raw = JSON.parse(localStorage.getItem(STORE_KEY));
-      if (raw && raw.cases && Object.keys(raw.cases).length) return raw;
+      if (raw && raw.cases && Object.keys(raw.cases).length) {
+        Object.values(raw.cases).forEach(migrate);
+        return raw;
+      }
     } catch (e) { /* 無法讀取時使用新案件 */ }
     const c = newCase();
     return { current: c.id, cases: { [c.id]: c } };
@@ -211,13 +228,21 @@
     });
     $('#nameList') && ($('#nameList').innerHTML = r.people.map((p) => `<option value="${esc(p.name)}">`).join(''));
 
+    $('#halveNote').textContent = r.halved
+      ? '✓ 適用收費標準第 6 條：依已核定測量成果辦理，無需實地測量，規費按半數計收。'
+      : c.needSurvey
+        ? '✗ 需實地測量或確定界址點，不適用第 6 條減半，按原價計收。'
+        : '✗ 非依法院確定判決／調處結果申請，按原價計收。';
+    $('#halveNote').classList.toggle('on', r.halved);
+
     // KPI
     $('#kpis').innerHTML = [
       ['規費合計', r.grossFee, `基本費 ${money(r.base)} + 施測費 ${money(r.survey)}`],
-      [c.halve ? '減半後應徵' : '應徵規費', r.fee, c.halve ? '法院確定判決規費減半' : '未減半'],
-      ['每筆均分', r.perParcel, `÷ 分割後 ${r.N} 筆${c.roundMode === 'parcel' ? `，先捨去為 ${money(r.perParcelRounded)}` : ''}`],
+      [r.halved ? '減半後應徵' : '應徵規費（原價）', r.fee, r.halved ? '收費標準第 6 條半數計收' : '不適用減半'],
+      ['每筆均分', r.perParcel, `÷ 分割後 ${r.N} 筆`],
       ['已分配', r.allocated, '各共有人應繳合計'],
-      ['餘數（申請人）', r.remainder, r.bearer ? `由 ${r.bearer} 負擔` : '尚未指定申請人', 'accent'],
+      ['差額（申請人）', r.remainder, r.applicant ? `由 ${r.applicant} 負擔` : '尚未指定申請人', 'accent'],
+      ['界址點費用', r.pointFee, `${r.pointCount} 點 × ${r.pointUnit} 元，申請人負擔`],
       ['欠繳合計', r.totals.owe, '未會同人註記欠繳', r.totals.owe ? 'warn' : ''],
       ['應退合計', r.totals.over, '溢繳應退還', r.totals.over ? 'ok' : ''],
     ].map(([k, v, s, cls]) => `<div class="kpi ${cls || ''}"><span class="k">${k}</span><span class="v">${money(v)}</span><span class="s">${esc(s)}</span></div>`).join('');
@@ -246,13 +271,13 @@
     } else {
       tbl.innerHTML = `
         <thead><tr>
-          <th>姓名</th><th>申請人</th><th>分配地號（持分）</th><th class="num">應繳</th><th class="num">餘數＋界址點</th>
+          <th>姓名</th><th>申請人</th><th>分配地號（持分）</th><th class="num">應繳</th><th class="num">差額＋界址點</th>
           <th class="num">應繳合計</th><th class="num">已繳</th><th class="num">溢繳</th><th class="num">欠繳</th><th>狀態</th><th>備註</th>
         </tr></thead>
         <tbody>${r.people.map((p) => `
-          <tr data-name="${esc(p.name)}" class="${p.isBearer ? 'bearer' : ''}">
+          <tr data-name="${esc(p.name)}" class="${p.isApplicant ? 'bearer' : ''}">
             <td><b>${esc(p.name)}</b></td>
-            <td><label class="switch sm"><input type="checkbox" data-pp="applicant" ${p.isApplicant ? 'checked' : ''}><span class="track"></span></label></td>
+            <td><label class="radio" title="設為申請人"><input type="radio" name="applicantRadio" data-pp="applicant" ${p.isApplicant ? 'checked' : ''}><span></span></label></td>
             <td class="muted">${esc(p.parcels.join('、'))}</td>
             <td class="num">${money(p.due)}</td>
             <td class="num" data-c="extra">${money(p.remainder + p.pointFee)}</td>
@@ -269,11 +294,11 @@
           <td class="num">${money(r.totals.over)}</td><td class="num">${money(r.totals.owe)}</td><td colspan="2"></td>
         </tr></tfoot>`;
     }
-    const sel = $('#remainderTo');
-    sel.innerHTML = r.applicants.length
-      ? r.applicants.map((n) => `<option ${n === r.bearer ? 'selected' : ''}>${esc(n)}</option>`).join('')
-      : '<option value="">（請先勾選申請人）</option>';
-    sel.disabled = r.applicants.length < 2;
+    const sel = $('#applicantSel');
+    if (document.activeElement !== sel) {
+      sel.innerHTML = '<option value="">（請選擇申請人）</option>' +
+        r.names.map((n) => `<option ${n === r.applicant ? 'selected' : ''}>${esc(n)}</option>`).join('');
+    }
   }
 
   const statusCls = (s) => ({ '註記欠繳': 'warn', '應補繳': 'warn', '溢繳應退': 'ok', '溢繳': 'ok', '已繳清': 'done' }[s] || '');
@@ -284,10 +309,14 @@
     if (!tr || !el.dataset.pp) return;
     const name = tr.dataset.name;
     const persons = cur().persons;
-    const info = (persons[name] = persons[name] || {});
-    info[el.dataset.pp] = el.type === 'checkbox' ? el.checked : el.value;
+    if (el.dataset.pp === 'applicant') {
+      cur().applicant = name;
+      el.blur();
+    } else {
+      const info = (persons[name] = persons[name] || {});
+      info[el.dataset.pp] = el.value;
+    }
     save();
-    if (el.type === 'checkbox') el.blur();
     refresh();
   }
 
@@ -321,7 +350,7 @@
       <table class="ptbl">
         <thead>
           <tr><th colspan="9" class="cap">各共有人應繳彙總</th></tr>
-          <tr><th>姓名</th><th>身分</th><th>應繳</th><th>餘數＋界址點</th><th>應繳合計</th><th>已繳</th><th>溢繳（應退）</th><th>欠繳</th><th>處理</th></tr>
+          <tr><th>姓名</th><th>身分</th><th>應繳</th><th>差額＋界址點</th><th>應繳合計</th><th>已繳</th><th>溢繳（應退）</th><th>欠繳</th><th>處理</th></tr>
         </thead>
         <tbody>${r.people.map((p) => `
           <tr><td>${esc(p.name)}</td><td class="c">${p.isApplicant ? '申請人' : '未會同'}</td><td class="r">${money(p.due)}</td>
@@ -334,9 +363,9 @@
 
     const feeHtml = `
       <table class="ptbl fee">
-        <tr><th>基本費</th><th>施測費</th><th>合計</th><th>${c.halve ? '規費減半' : '應徵規費'}</th><th>分割後筆數</th><th>每筆均分</th><th>已分配</th><th>餘數（申請人）</th><th>界址點費用</th></tr>
+        <tr><th>基本費</th><th>施測費</th><th>合計</th><th>${r.halved ? '規費減半' : '應徵規費(原價)'}</th><th>分割後筆數</th><th>每筆均分</th><th>已分配</th><th>差額（申請人）</th><th>界址點費用</th></tr>
         <tr><td>${money(r.base)}</td><td>${money(r.survey)}</td><td>${money(r.grossFee)}</td><td>${money(r.fee)}</td><td>${r.N}</td>
-        <td>${money(r.perParcel)}</td><td>${money(r.allocated)}</td><td>${money(r.remainder)}</td><td>${money(r.pointFee)}</td></tr>
+        <td>${money(r.perParcel)}</td><td>${money(r.allocated)}</td><td>${money(r.remainder)}</td><td>${money(r.pointFee)}${r.pointCount ? `<br><small>${r.pointCount}點</small>` : ''}</td></tr>
       </table>`;
 
     const copy = (cp) => `
@@ -345,12 +374,12 @@
         <h1>共有物分割土地複丈費分擔清冊</h1>
         <table class="meta">
           <tr><th>判決確定共有物分割案號</th><td>${esc(c.caseNo)}</td><th>收件字號</th><td>${esc(c.receiptNo)}</td></tr>
-          <tr><th>製表日期</th><td>${today}</td><th>捨去方式</th><td>${c.roundMode === 'parcel' ? '每筆先捨去後依持分捨去' : '依持分計算後一次捨去'}</td></tr>
+          <tr><th>製表日期</th><td>${today}</td><th>計收方式</th><td>${r.halved ? '依收費標準第 6 條半數計收' : (c.needSurvey ? '需實地測量／確定界址點，原價計收' : '原價計收')}</td></tr>
         </table>
         ${feeHtml}
         ${parcelsHtml}
         ${peopleHtml}
-        <p class="basis">依據：114.7.17 研商部分共有人申辦共有物分割複丈案件收費原則會議紀錄議題二。規費依分割後筆數均分，維持共有者依持分分算，無條件捨去至整數，餘數及確定分割界址點費用由申請人繳納；未會同申請之共有人依內政部 90.6.22 台（90）內地字第 9073215 號函註記欠繳。</p>
+        <p class="basis">依據：114.7.17 研商部分共有人申辦共有物分割複丈案件收費原則會議紀錄議題二。規費依分割後筆數均分，維持共有者依持分分算，無條件捨去至整數，餘數及確定分割界址點費用由申請人繳納；依法院確定判決等申請而無需實地測量者，依收費標準第 6 條半數計收；未會同申請之共有人依內政部 90.6.22 台（90）內地字第 9073215 號函註記欠繳。</p>
         ${r.warnings.some((w) => w.level === 'error') ? '<p class="err">※ 本清冊仍有檢核錯誤，請修正後再列印。</p>' : ''}
         <div class="sign">
           <div>承辦人<span>${esc(c.clerk)}</span></div><div>課長<span></span></div><div>主任<span></span></div>
@@ -386,7 +415,7 @@
     const q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const lines = [['地號', '共有人姓名', '分母', '分子', '應繳測量費', '備註']];
     r.parcels.forEach((pr) => pr.rows.forEach((row) => lines.push([pr.landNo, row.name, row.den, row.num, row.due, row.note])));
-    lines.push([], ['姓名', '身分', '應繳', '餘數', '界址點費', '應繳合計', '已繳', '溢繳', '欠繳', '處理', '備註']);
+    lines.push([], ['姓名', '身分', '應繳', '差額', '界址點費', '應繳合計', '已繳', '溢繳', '欠繳', '處理', '備註']);
     r.people.forEach((p) => lines.push([p.name, p.isApplicant ? '申請人' : '未會同', p.due, p.remainder, p.pointFee, p.total, p.paid, p.over, p.owe, p.status, p.note]));
     download(fileBase() + '.csv', '﻿' + lines.map((l) => l.map(q).join(',')).join('\r\n'), 'text/csv;charset=utf-8');
   }
@@ -399,6 +428,7 @@
         if (!Array.isArray(c.parcels)) throw new Error('格式不符');
         c.id = uid();
         c.persons = c.persons || {};
+        migrate(c);
         db.cases[c.id] = c;
         db.current = c.id;
         save();
@@ -430,16 +460,22 @@
     for (let i = 0; i < 3; i++) if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) > (pb[i] || 0);
     return false;
   };
+  const SITE = 'https://gn01918004-hub.github.io/courtPartition-/';
+  const DOWNLOAD = 'https://github.com/gn01918004-hub/courtPartition-/releases/latest';
   async function checkUpdate() {
-    if (location.protocol === 'file:') return;
+    const standalone = !!window.STANDALONE;
+    if (!standalone && location.protocol === 'file:') return;
     try {
-      const res = await fetch(`version.json?t=${Date.now()}`, { cache: 'no-store' });
+      const res = await fetch(`${standalone ? SITE : ''}version.json?t=${Date.now()}`, { cache: 'no-store' });
       const v = await res.json();
       if (v.version && newer(v.version, APP_VERSION)) {
         const b = $('#updateBanner');
-        b.innerHTML = `✨ 有新版本 v${esc(v.version)} 可用 <button class="btn primary sm">立即更新</button>`;
+        b.innerHTML = standalone
+          ? `✨ 有新版本 v${esc(v.version)}，請下載新的 HTML 檔取代此檔（案件資料可先「匯出 JSON」備份） <a class="btn primary sm" href="${DOWNLOAD}" target="_blank" rel="noopener">下載新版</a>`
+          : `✨ 有新版本 v${esc(v.version)} 可用 <button class="btn primary sm">立即更新</button>`;
         b.hidden = false;
-        b.querySelector('button').onclick = () => { location.href = `${location.pathname}?v=${encodeURIComponent(v.version)}`; };
+        const btn = b.querySelector('button');
+        if (btn) btn.onclick = () => { location.href = `${location.pathname}?v=${encodeURIComponent(v.version)}`; };
       }
     } catch (e) { /* 離線時略過 */ }
   }
@@ -514,7 +550,7 @@
     $('#parcels').addEventListener('click', onParcelsClick);
     $('#people').addEventListener('input', onPeopleInput);
     $('#people').addEventListener('focusout', () => setTimeout(() => last && !$('#people').contains(document.activeElement) && refresh()));
-    $('#remainderTo').onchange = (e) => { cur().remainderTo = e.target.value; save(); refresh(); };
+    $('#applicantSel').onchange = (e) => { cur().applicant = e.target.value; save(); e.target.blur(); refresh(); };
 
     bindForm();
     loadCurrent();

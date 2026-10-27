@@ -1,0 +1,1247 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>共有物分割複丈費清冊</title>
+<meta name="description" content="法院判決共有物分割：各共有人應繳土地複丈費計算與清冊列印">
+<style>
+:root {
+  --bg: #070a12;
+  --bg2: #0c1220;
+  --panel: rgba(20, 28, 46, 0.72);
+  --panel-solid: #121a2c;
+  --line: rgba(120, 150, 210, 0.16);
+  --line-strong: rgba(120, 150, 210, 0.32);
+  --text: #e6ecf8;
+  --muted: #8a97b2;
+  --cyan: #38e1ff;
+  --violet: #8b7bff;
+  --pink: #ff5fa2;
+  --ok: #3ee6a0;
+  --warn: #ffb547;
+  --err: #ff5c6c;
+  --grad: linear-gradient(135deg, var(--cyan), var(--violet) 55%, var(--pink));
+  --radius: 16px;
+  --font: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  font-family: var(--font);
+  color: var(--text);
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(56, 225, 255, 0.12), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgba(139, 123, 255, 0.14), transparent 60%),
+    radial-gradient(800px 600px at 50% 120%, rgba(255, 95, 162, 0.08), transparent 60%),
+    var(--bg);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+body::before { /* 細網格 */
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(ellipse at 50% 0%, #000 0%, transparent 70%);
+  opacity: 0.35;
+}
+#app { position: relative; z-index: 1; max-width: 1280px; margin: 0 auto; padding: 0 16px 40px; }
+
+/* ---------- 頂列 ---------- */
+.topbar {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; justify-content: space-between;
+  padding: 14px 0; margin-bottom: 8px;
+  background: linear-gradient(to bottom, rgba(7, 10, 18, 0.95), rgba(7, 10, 18, 0.75));
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: 12px; }
+.logo {
+  width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; color: #fff;
+  background: var(--grad); box-shadow: 0 0 24px rgba(56, 225, 255, 0.35);
+}
+.logo svg { width: 24px; height: 24px; }
+h1 { font-size: 1.15rem; margin: 0; letter-spacing: 0.04em; }
+.sub { margin: 2px 0 0; color: var(--muted); font-size: 0.78rem; }
+.badge {
+  font-family: var(--mono); font-size: 0.75rem; color: var(--cyan);
+  border: 1px solid rgba(56, 225, 255, 0.4); background: rgba(56, 225, 255, 0.08);
+  padding: 3px 10px; border-radius: 999px; cursor: pointer; transition: 0.2s;
+}
+.badge:hover { box-shadow: 0 0 16px rgba(56, 225, 255, 0.4); }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+/* ---------- 按鈕／輸入 ---------- */
+.btn {
+  font: inherit; font-size: 0.85rem; color: var(--text); cursor: pointer;
+  background: rgba(255, 255, 255, 0.04); border: 1px solid var(--line-strong);
+  padding: 7px 12px; border-radius: 10px; transition: 0.15s; white-space: nowrap;
+}
+.btn:hover { border-color: var(--cyan); background: rgba(56, 225, 255, 0.08); }
+.btn:active { transform: translateY(1px); }
+.btn.primary { background: var(--grad); border: 0; color: #0a0d18; font-weight: 700; box-shadow: 0 4px 20px rgba(139, 123, 255, 0.35); }
+.btn.primary:hover { filter: brightness(1.1); }
+.btn.accent { border-color: var(--cyan); color: var(--cyan); }
+.btn.danger:hover { border-color: var(--err); color: var(--err); background: rgba(255, 92, 108, 0.08); }
+.btn.ghost { background: transparent; }
+.btn.sm { padding: 4px 9px; font-size: 0.78rem; }
+.btn.icon { width: 34px; padding: 6px 0; text-align: center; }
+.btn.icon.sm { width: 26px; padding: 2px 0; }
+
+input, select {
+  font: inherit; color: var(--text); width: 100%;
+  background: rgba(5, 8, 16, 0.6); border: 1px solid var(--line-strong);
+  border-radius: 10px; padding: 8px 10px; outline: none; transition: 0.15s;
+}
+input:focus, select:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(56, 225, 255, 0.15); }
+input::placeholder { color: #55617a; }
+select option { background: var(--panel-solid); }
+#caseSelect { width: auto; max-width: 240px; }
+input.short { width: 5.5em; text-align: right; font-family: var(--mono); }
+
+/* ---------- 卡片 ---------- */
+main { display: grid; gap: 18px; }
+.card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 18px 20px; backdrop-filter: blur(10px);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+.card h2 { font-size: 1rem; margin: 0 0 14px; display: flex; align-items: center; gap: 10px; letter-spacing: 0.05em; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 12px var(--cyan); }
+.dot.warn { background: var(--warn); box-shadow: 0 0 12px var(--warn); }
+.grid-2 { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 18px; }
+.row-between { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; }
+.row-between h2 { margin: 0; }
+.hint { color: var(--muted); font-size: 0.8rem; margin: 8px 0 14px; }
+.muted { color: var(--muted); }
+.center { text-align: center; }
+
+.form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 14px; }
+.form label { display: grid; gap: 6px; font-size: 0.78rem; color: var(--muted); }
+.form .wide { grid-column: 1 / -1; }
+
+/* 開關 */
+.switch { display: flex !important; align-items: center; gap: 10px; cursor: pointer; color: var(--text) !important; font-size: 0.85rem !important; }
+.switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+.switch .track { width: 40px; height: 22px; border-radius: 999px; background: #222b40; border: 1px solid var(--line-strong); position: relative; transition: 0.2s; flex: none; }
+.switch .track::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #8a97b2; transition: 0.2s; }
+.switch input:checked + .track { background: rgba(56, 225, 255, 0.25); border-color: var(--cyan); }
+.switch input:checked + .track::after { left: 20px; background: var(--cyan); box-shadow: 0 0 10px var(--cyan); }
+.switch input:focus-visible + .track { box-shadow: 0 0 0 3px rgba(56, 225, 255, 0.25); }
+.switch.sm .track { width: 34px; height: 19px; }
+.switch.sm .track::after { width: 13px; height: 13px; }
+.switch.sm input:checked + .track::after { left: 17px; }
+
+/* KPI */
+.kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; align-content: start; }
+.kpi { padding: 12px 14px; border-radius: 12px; background: rgba(5, 8, 16, 0.5); border: 1px solid var(--line); display: grid; gap: 2px; }
+.kpi .k { font-size: 0.72rem; color: var(--muted); letter-spacing: 0.06em; }
+.kpi .v { font-family: var(--mono); font-size: 1.45rem; font-weight: 700; }
+.kpi .s { font-size: 0.7rem; color: var(--muted); }
+.kpi:first-child .v, .kpi.accent .v { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.kpi.accent { border-color: rgba(139, 123, 255, 0.5); box-shadow: inset 0 0 30px rgba(139, 123, 255, 0.12); }
+.kpi.warn .v { color: var(--warn); }
+.kpi.ok .v { color: var(--ok); }
+
+/* 筆數 stepper */
+.stepper { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--muted); }
+.stepper input { width: 64px; text-align: center; font-family: var(--mono); font-size: 1.05rem; }
+
+/* 地號卡片 */
+.parcels { display: grid; gap: 14px; }
+.parcel {
+  border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px;
+  background: linear-gradient(180deg, rgba(56, 225, 255, 0.04), transparent 40%), rgba(5, 8, 16, 0.4);
+  animation: rise 0.35s ease both; animation-delay: calc(var(--i) * 40ms);
+}
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+.parcel header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 8px; }
+.pno { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; font-family: var(--mono); font-weight: 700; color: #0a0d18; background: var(--grad); }
+.land { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--muted); }
+.land input { width: 150px; font-family: var(--mono); }
+.chip { font-size: 0.72rem; padding: 3px 9px; border-radius: 999px; color: var(--ok); border: 1px solid rgba(62, 230, 160, 0.4); background: rgba(62, 230, 160, 0.08); }
+.chip.bad { color: var(--err); border-color: rgba(255, 92, 108, 0.5); background: rgba(255, 92, 108, 0.1); }
+.subtotal { font-size: 0.8rem; color: var(--muted); }
+.subtotal b { font-family: var(--mono); color: var(--text); font-size: 0.95rem; }
+.pact { margin-left: auto; display: flex; gap: 6px; }
+.add { margin-top: 8px; }
+
+/* 表格 */
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.tbl th { text-align: left; font-weight: 500; color: var(--muted); font-size: 0.74rem; padding: 6px 8px; border-bottom: 1px solid var(--line-strong); white-space: nowrap; }
+.tbl td { padding: 5px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.tbl td input { padding: 6px 8px; min-width: 6em; }
+.tbl .num { text-align: right; }
+.tbl .n { width: 2em; color: var(--muted); font-family: var(--mono); }
+.tbl .due, .tbl td[data-c], .tbl .strong { font-family: var(--mono); }
+.tbl .due { color: var(--cyan); font-weight: 700; }
+.tbl .strong { font-weight: 700; }
+.tbl tfoot td { font-weight: 700; border-top: 1px solid var(--line-strong); border-bottom: 0; font-family: var(--mono); }
+.tbl tbody tr:hover { background: rgba(56, 225, 255, 0.04); }
+#people tr.bearer td:first-child b { color: var(--violet); }
+#people tr.bearer td:first-child b::after { content: " ★申請人"; font-size: 0.68rem; font-weight: 400; color: var(--violet); }
+#people td.muted { font-size: 0.75rem; max-width: 220px; }
+.status { font-size: 0.72rem; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line-strong); white-space: nowrap; }
+.status.warn { color: var(--warn); border-color: rgba(255, 181, 71, 0.5); background: rgba(255, 181, 71, 0.08); }
+.status.ok { color: var(--ok); border-color: rgba(62, 230, 160, 0.5); background: rgba(62, 230, 160, 0.08); }
+.status.done { color: var(--muted); }
+.remainder-pick { font-size: 0.85rem; color: var(--muted); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+.remainder-pick select { width: auto; min-width: 160px; }
+
+/* 檢核 */
+.warnings { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.warnings li { font-size: 0.85rem; padding: 8px 12px; border-radius: 10px; border-left: 3px solid; background: rgba(5, 8, 16, 0.5); }
+.warnings li.error { border-color: var(--err); color: #ffb3bb; }
+.warnings li.warn { border-color: var(--warn); color: #ffd9a0; }
+.warnings li.ok { border-color: var(--ok); color: #aef5d4; }
+#warnCard.clean .dot { background: var(--ok); box-shadow: 0 0 12px var(--ok); }
+
+.basis ol { margin: 0; padding-left: 1.3em; color: var(--muted); font-size: 0.82rem; line-height: 1.8; }
+
+.foot { text-align: center; color: var(--muted); font-size: 0.75rem; margin-top: 28px; }
+.foot a { color: var(--cyan); }
+
+.banner { margin: 10px 0; padding: 10px 14px; border-radius: 12px; border: 1px solid rgba(139, 123, 255, 0.5); background: rgba(139, 123, 255, 0.12); display: flex; gap: 12px; align-items: center; justify-content: space-between; }
+
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 50; background: var(--panel-solid); border: 1px solid var(--cyan); padding: 10px 18px; border-radius: 12px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5); animation: rise 0.25s ease; }
+
+/* 時間軸 */
+dialog { background: var(--panel-solid); color: var(--text); border: 1px solid var(--line-strong); border-radius: 18px; padding: 0; width: min(620px, calc(100vw - 32px)); max-height: 82vh; box-shadow: 0 20px 80px rgba(0, 0, 0, 0.6); }
+dialog::backdrop { background: rgba(3, 5, 10, 0.7); backdrop-filter: blur(4px); }
+.dlg-head { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--panel-solid); }
+.dlg-head h2 { margin: 0; font-size: 1rem; }
+.tl { list-style: none; margin: 0; padding: 18px 22px 22px 40px; position: relative; }
+.tl::before { content: ""; position: absolute; left: 24px; top: 24px; bottom: 24px; width: 2px; background: linear-gradient(var(--cyan), var(--violet), transparent); }
+.tl > li { position: relative; padding-bottom: 22px; }
+.tl > li::before { content: ""; position: absolute; left: -21px; top: 5px; width: 12px; height: 12px; border-radius: 50%; background: var(--panel-solid); border: 2px solid var(--violet); }
+.tl > li.latest::before { background: var(--cyan); border-color: var(--cyan); box-shadow: 0 0 14px var(--cyan); }
+.tl > li.fresh { animation: rise 0.5s ease; }
+.tl-head { display: flex; gap: 10px; align-items: center; }
+.tl-ver { font-family: var(--mono); font-weight: 700; color: var(--cyan); }
+.tl-date { color: var(--muted); font-size: 0.8rem; }
+.tl-tag { font-size: 0.68rem; padding: 1px 8px; border-radius: 999px; background: var(--grad); color: #0a0d18; font-weight: 700; }
+.tl-title { margin: 4px 0 6px; font-weight: 600; }
+.tl ul { margin: 0; padding-left: 1.1em; color: var(--muted); font-size: 0.84rem; line-height: 1.7; }
+
+#print-root { display: none; }
+
+@media (max-width: 900px) {
+  .grid-2 { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .form { grid-template-columns: 1fr; }
+  .topbar { position: static; }
+  .toolbar .btn { flex: 1 1 auto; }
+  #caseSelect { max-width: none; width: 100%; }
+  .pact { margin-left: 0; }
+  .land input { width: 120px; }
+}
+
+/* ================= 列印：白底黑字 A4，1 式 2 聯 ================= */
+@media print {
+  @page { size: A4 portrait; margin: 12mm 12mm 14mm; }
+  :root { color-scheme: light; }
+  html, body { background: #fff !important; color: #000; width: auto; min-height: 0; }
+  body::before, #app, dialog, .toast { display: none !important; }
+  #print-root { display: block !important; font-family: "標楷體", "DFKai-SB", "BiauKai", var(--font); color: #000; }
+  .sheet { position: relative; page-break-after: always; break-after: page; font-size: 10pt; }
+  .sheet:last-child { page-break-after: auto; break-after: auto; }
+  .sheet h1 { text-align: center; font-size: 17pt; margin: 1mm 0 4mm; letter-spacing: 0.15em; }
+  .copy-tag { position: absolute; top: 0; right: 0; border: 1.5px solid #000; padding: 1.5mm 3mm; text-align: center; font-weight: 700; line-height: 1.3; }
+  .copy-tag small { font-weight: 400; font-size: 9pt; }
+  .sheet table { width: 100%; border-collapse: collapse; margin-bottom: 3mm; page-break-inside: auto; }
+  .sheet tr { page-break-inside: avoid; break-inside: avoid; }
+  .sheet thead { display: table-header-group; }
+  .sheet th, .sheet td { border: 0.8px solid #000; padding: 0.8mm 2mm; }
+  .sheet th { background: #eee !important; font-weight: 700; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .meta th { width: 22%; text-align: left; }
+  .fee th, .fee td { text-align: center; font-size: 9.5pt; }
+  .ptbl .cap { text-align: left; background: #ddd !important; }
+  .ptbl .c { text-align: center; }
+  .ptbl .r { text-align: right; font-variant-numeric: tabular-nums; }
+  .ptbl .b { font-weight: 700; }
+  .ptbl tfoot td { font-weight: 700; }
+  .basis { font-size: 8pt; line-height: 1.45; margin: 1mm 0 3mm; }
+  .err { font-weight: 700; }
+  .sign { display: flex; justify-content: space-between; gap: 6mm; margin-top: 5mm; page-break-inside: avoid; }
+  .sign div { flex: 1; border-bottom: 1px solid #000; padding-bottom: 8mm; font-weight: 700; }
+  .sign span { font-weight: 400; margin-left: 4mm; }
+  .pfoot { margin-top: 4mm; font-size: 8pt; text-align: right; color: #333; }
+}
+
+[hidden] { display: none !important; }
+main > *, .grid-2 > *, .parcels > * { min-width: 0; }
+
+.halve-note { margin: 0; font-size: 0.8rem; padding: 8px 12px; border-radius: 10px; color: #ffd9a0; background: rgba(255, 181, 71, 0.08); border: 1px solid rgba(255, 181, 71, 0.35); }
+.halve-note.on { color: #aef5d4; background: rgba(62, 230, 160, 0.08); border-color: rgba(62, 230, 160, 0.35); }
+.radio { display: inline-grid; place-items: center; cursor: pointer; }
+.radio input { position: absolute; opacity: 0; width: 0; height: 0; }
+.radio span { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--line-strong); transition: 0.15s; }
+.radio input:checked + span { border-color: var(--violet); background: radial-gradient(circle, var(--violet) 45%, transparent 50%); box-shadow: 0 0 10px rgba(139, 123, 255, 0.6); }
+.radio input:focus-visible + span { box-shadow: 0 0 0 3px rgba(139, 123, 255, 0.35); }
+
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">
+        <svg viewBox="0 0 32 32"><path d="M4 6h24v20H4z M4 16h24 M16 6v20 M10 6v10 M22 16v10" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+      </div>
+      <div>
+        <h1>共有物分割複丈費清冊</h1>
+        <p class="sub">法院判決／和解／調解／調處 · 各共有人應繳規費計算</p>
+      </div>
+      <button id="versionBtn" class="badge" title="查看更新時間軸">v—</button>
+    </div>
+    <div class="toolbar">
+      <select id="caseSelect" title="切換案件"></select>
+      <button class="btn" data-act="new">＋ 新案件</button>
+      <button class="btn" data-act="sample">載入範例</button>
+      <button class="btn" data-act="import">匯入</button>
+      <button class="btn" data-act="export">匯出 JSON</button>
+      <button class="btn" data-act="csv">匯出 CSV</button>
+      <button class="btn danger" data-act="delete">刪除案件</button>
+      <button class="btn primary" data-act="print">🖨 列印清冊（1式2份）</button>
+      <input type="file" id="importFile" accept=".json,application/json" hidden>
+    </div>
+  </header>
+
+  <div id="updateBanner" class="banner" hidden></div>
+
+  <main>
+    <section class="grid-2">
+      <div class="card">
+        <h2><span class="dot"></span>案件資料</h2>
+        <div class="form">
+          <label class="wide">判決確定共有物分割案號
+            <input data-f="caseNo" placeholder="例：114年度重訴字第123號">
+          </label>
+          <label>收件字號
+            <input data-f="receiptNo" placeholder="例：通數土字第000000號">
+          </label>
+          <label>承辦人
+            <input data-f="clerk">
+          </label>
+          <label>基本費（全案，元）
+            <input data-f="baseFee" inputmode="numeric">
+          </label>
+          <label>施測費（全案，元）
+            <input data-f="surveyFee" inputmode="numeric">
+          </label>
+          <label>確定界址點數（每點 200 元，申請人負擔）
+            <input data-f="pointCount" inputmode="numeric" placeholder="0">
+          </label>
+          <label class="switch wide">
+            <input type="checkbox" data-f="courtBased">
+            <span class="track"></span>
+            依法院確定判決（或同一效力文件）、調處結果申請
+          </label>
+          <label class="switch wide">
+            <input type="checkbox" data-f="needSurvey">
+            <span class="track"></span>
+            需實地測量或確定界址點（不適用減半，原價計收）
+          </label>
+          <p class="wide halve-note" id="halveNote"></p>
+        </div>
+      </div>
+
+      <div class="card kpis" id="kpis"></div>
+    </section>
+
+    <section class="card">
+      <div class="row-between">
+        <h2><span class="dot"></span>分割後地號</h2>
+        <div class="stepper">
+          <span>分割後筆數</span>
+          <button class="btn icon" data-act="dec" aria-label="減少一筆">−</button>
+          <input id="countInput" inputmode="numeric">
+          <button class="btn icon" data-act="inc" aria-label="增加一筆">＋</button>
+          <button class="btn accent" data-act="apply">產生表格</button>
+        </div>
+      </div>
+      <p class="hint">分割後仍為公同共有者（判決書多人共同分配一筆），請將所有人名寫在同一列、持分填 1/1，切勿分列，以免影響登記。</p>
+      <div id="parcels" class="parcels"></div>
+    </section>
+
+    <section class="card">
+      <h2><span class="dot"></span>各共有人應繳彙總</h2>
+      <p class="hint">同一人跨多筆地號已自動合併。指定申請人並填寫已繳金額；捨去後的差額與界址點費用一律由申請人負擔。</p>
+      <div class="remainder-pick">
+        申請人：<select id="applicantSel"></select>
+      </div>
+      <div class="table-wrap"><table class="tbl" id="people"></table></div>
+    </section>
+
+    <section class="card" id="warnCard">
+      <h2><span class="dot warn"></span>檢核</h2>
+      <ul id="warnings" class="warnings"></ul>
+    </section>
+
+    <section class="card basis">
+      <h2><span class="dot"></span>計算依據</h2>
+      <ol>
+        <li>依 114 年 7 月 17 日「研商登記機關受理囑託非屬建築物之位置與面積測量及部分共有人申辦共有物分割複丈案件之收費原則事宜」會議紀錄議題二辦理。</li>
+        <li>各宗土地應徵之分割複丈規費（基本費及施測費）依分割證明文件之分割後土地筆數均分，由分割後土地所有權人繳納。</li>
+        <li>分割後維持共有狀態之地號，再依各共有人持分比例分算應繳規費。</li>
+        <li>計算採無條件捨去法至整數（依持分算到個人時一次捨去），餘數部分由申請人繳納；確定分割界址點費用（每點 200 元）由申請人繳納。</li>
+        <li>依土地複丈費及建築改良物測量費收費標準第 6 條，依法院確定判決或同一效力文件、調處結果申請，得依已核定測量成果辦理而無需實地測量者，按半數計收；需實地測量或確定界址點者原價計收。</li>
+        <li>未會同申請之共有人，依內政部 90 年 6 月 22 日台（90）內地字第 9073215 號函註記欠繳複丈費。</li>
+        <li>分割證明文件已載明複丈費繳納方式或申請人願繳納全額者，不適用本清冊。</li>
+      </ol>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span id="footVer"></span> · 資料僅儲存在本機瀏覽器 · <a href="https://github.com/gn01918004-hub/courtPartition-" target="_blank" rel="noopener">GitHub</a>
+  </footer>
+</div>
+
+<dialog id="timeline">
+  <div class="dlg-head">
+    <h2>更新時間軸</h2>
+    <button class="btn icon" data-close aria-label="關閉">✕</button>
+  </div>
+  <ol class="tl" id="tlList"></ol>
+</dialog>
+
+<div id="print-root" aria-hidden="true"></div>
+
+<script>window.STANDALONE = true;</script>
+<script>
+/* 版本時間軸：最新版本放最上面。發布新版時只要在此新增一筆並同步 version.json。 */
+window.CHANGELOG = [
+  {
+    version: '3.1.0',
+    date: '2026-10-27',
+    title: '減半條件與申請人指定',
+    highlights: [
+      '新增「需實地測量或確定界址點」勾選：依收費標準第 6 條，勾選後不適用減半、按原價計收',
+      '確定界址點改填點數，每點 200 元（附表一附註三）自動計入申請人應繳',
+      '捨去方式固定為「依持分算到個人時一次捨去」，捨去後的差額一律由申請人負擔',
+      '申請人改為單選指定（下拉選單或彙總表圓鈕）',
+      '新增單一 HTML 檔版本，可直接分享，雙擊即可離線使用',
+      '舊版案件資料開啟時自動轉換',
+    ],
+  },
+  {
+    version: '3.0.0',
+    date: '2026-10-27',
+    title: '網頁版上線',
+    highlights: [
+      '由 Excel v2.1 改寫為網頁版，深色介面，免安裝、免啟用巨集',
+      '輸入「分割後筆數」自動產生各筆地號表格（取代 A6 巨集），減少筆數時會先確認，不再整批清除',
+      '同一人跨多筆地號自動合併計算；已繳金額改為以「人」為單位填寫，修正申請人餘數在多筆時重複扣除的問題',
+      '持分合計改用分數精確檢核，支援不同分母（如 1/2、1/4、1/4）',
+      '整數運算取代浮點數，避免 ROUNDDOWN 誤差；提供「最後一次捨去／每筆先捨去」兩種捨去方式',
+      '新增確定分割界址點費用欄位（由申請人負擔）',
+      '一鍵列印清冊 1 式 2 份：第一聯附卷、第二聯移送登記課',
+      '案件自動儲存於瀏覽器，可匯出／匯入 JSON、匯出 CSV',
+      '版本時間軸與新版自動提示',
+    ],
+  },
+  {
+    version: '2.1.0',
+    date: '2026-03',
+    title: 'Excel 版（原始檔，日期依說明頁 115.3.23 推估）',
+    highlights: [
+      '依 114.7.17 會議紀錄議題二建立計算表',
+      'A6 輸入分割後筆數，巨集自動由模板區複製表格',
+    ],
+  },
+];
+
+</script>
+<script>
+/*
+ * 共有物分割複丈費分擔 — 計算核心（純函式，瀏覽器與 Node 共用）
+ *
+ * 依據：114.7.17「研商登記機關受理囑託非屬建築物之位置與面積測量及部分共有人
+ * 申辦共有物分割複丈案件之收費原則事宜」會議紀錄 議題二
+ *   1. 分割複丈規費（基本費＋施測費）依分割後筆數均分，由分割後所有權人繳納。
+ *   2. 分割後維持共有者，再依各共有人持分比例分算。
+ *   3. 採無條件捨去至整數，餘數由申請人繳納。
+ *   4. 確定分割界址點費用由申請人繳納。
+ * 減半依「土地複丈費及建築改良物測量費收費標準」第 6 條：依法院確定判決等
+ * 申請、依已核定測量成果辦理而無需實地測量者，按半數計收；需實地測量或
+ * 確定界址點者原價計收。
+ *
+ * 所有金額以「半元」為單位做整數運算（規費減半時可能出現 .5），
+ * 避免 Excel / 浮點數 ROUNDDOWN(562.5/3*3) 之類的誤差。
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.Calc = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  const toInt = (v) => {
+    const n = Number(String(v ?? '').replace(/[,\s]/g, ''));
+    return Number.isFinite(n) ? n : NaN;
+  };
+  const isPosInt = (n) => Number.isInteger(n) && n > 0;
+  const isNonNegInt = (n) => Number.isInteger(n) && n >= 0;
+
+  function bgcd(a, b) {
+    a = a < 0n ? -a : a;
+    b = b < 0n ? -b : b;
+    while (b) [a, b] = [b, a % b];
+    return a;
+  }
+
+  /** 持分加總（分數，BigInt 精確） → {n, d} 已約分 */
+  function sumShares(rows) {
+    let n = 0n, d = 1n;
+    for (const r of rows) {
+      const rn = toInt(r.num), rd = toInt(r.den);
+      if (!isNonNegInt(rn) || !isPosInt(rd)) continue;
+      n = n * BigInt(rd) + BigInt(rn) * d;
+      d = d * BigInt(rd);
+      const g = bgcd(n, d) || 1n;
+      n /= g; d /= g;
+    }
+    return { n, d };
+  }
+
+  const personKey = (name) => String(name ?? '').trim().replace(/\s+/g, ' ');
+
+  const POINT_UNIT = 200; // 收費標準附表一附註三：確定界址點每點 200 元
+
+  /** 是否減半：收費標準第 6 條，依法院確定判決／調處結果申請，且無需實地測量 */
+  function isHalved(c) {
+    const courtBased = c.courtBased ?? c.halve ?? true; // 舊版欄位 halve 相容
+    return !!courtBased && !c.needSurvey;
+  }
+
+  /** 申請人（一位）；相容舊版 persons[姓名].applicant 勾選 */
+  function applicantOf(c) {
+    const a = personKey(c.applicant);
+    if (a) return a;
+    const legacy = Object.entries(c.persons || {}).find(([, v]) => v && v.applicant);
+    return legacy ? personKey(legacy[0]) : '';
+  }
+
+  /**
+   * @param {object} c 案件資料
+   *   baseFee, surveyFee   全案基本費、施測費（元，原價）
+   *   courtBased            依法院確定判決或同一效力文件、調處結果申請
+   *   needSurvey            需實地測量或確定界址點 → 不適用第 6 條減半，原價計收
+   *   pointCount            確定界址點數（每點 200 元，由申請人負擔，不均分）
+   *   parcels[]             { landNo, owners[]: { name, den, num, note } }
+   *   applicant             申請人姓名；捨去後的差額、界址點費用全部由申請人負擔
+   *   persons{}             { [姓名]: { paid, note } }
+   * 捨去方式：每筆均分額不先捨去，依持分算到個人時一次無條件捨去。
+   */
+  function compute(c) {
+    const warnings = [];
+    const base = toInt(c.baseFee) || 0;
+    const survey = toInt(c.surveyFee) || 0;
+    const pointCount = c.pointCount === undefined || c.pointCount === ''
+      ? Math.round((toInt(c.pointFee) || 0) / POINT_UNIT) // 舊版以金額儲存
+      : toInt(c.pointCount);
+    const pointFee = (Number.isInteger(pointCount) && pointCount > 0 ? pointCount : 0) * POINT_UNIT;
+    const parcels = c.parcels || [];
+    const N = parcels.length;
+    const halved = isHalved(c);
+
+    // 以「半元」為單位，減半時才可能出現 .5
+    const feeHalf = halved ? base + survey : (base + survey) * 2;
+    const fee = feeHalf / 2;
+
+    if (!Number.isInteger(base) || !Number.isInteger(survey) || base < 0 || survey < 0)
+      warnings.push({ level: 'error', msg: '基本費／施測費必須為非負整數。' });
+    if (c.pointCount !== undefined && c.pointCount !== '' && !(Number.isInteger(pointCount) && pointCount >= 0))
+      warnings.push({ level: 'error', msg: '確定界址點數必須為非負整數。' });
+    if (pointFee && !c.needSurvey)
+      warnings.push({ level: 'warn', msg: '有確定界址點時應勾選「需實地測量或確定界址點」（不適用減半）。' });
+    if (N === 0) warnings.push({ level: 'warn', msg: '尚未建立任何分割後地號。' });
+
+    let allocatedHalf = 0;
+    const parcelResults = parcels.map((p, pi) => {
+      const label = p.landNo ? `地號 ${p.landNo}` : `第 ${pi + 1} 筆`;
+      if (!String(p.landNo ?? '').trim())
+        warnings.push({ level: 'warn', msg: `第 ${pi + 1} 筆尚未填寫地號。`, parcel: pi });
+      const owners = p.owners || [];
+      if (!owners.length) warnings.push({ level: 'error', msg: `${label} 沒有任何所有權人。`, parcel: pi });
+
+      let parcelDue = 0;
+      const rows = owners.map((o, oi) => {
+        const den = toInt(o.den), num = toInt(o.num);
+        const name = personKey(o.name);
+        let due = 0, ok = true;
+        if (!name) warnings.push({ level: 'warn', msg: `${label} 第 ${oi + 1} 列未填姓名。`, parcel: pi });
+        if (!isPosInt(den) || !isNonNegInt(num)) {
+          ok = false;
+          warnings.push({ level: 'error', msg: `${label}「${name || '第 ' + (oi + 1) + ' 列'}」持分分母／分子須為整數且分母大於 0。`, parcel: pi });
+        } else if (num > den) {
+          ok = false;
+          warnings.push({ level: 'error', msg: `${label}「${name}」分子大於分母。`, parcel: pi });
+        }
+        // floor( fee / N × num/den )，整數運算
+        if (ok && N) due = Math.floor((feeHalf * num) / (2 * N * den));
+        parcelDue += due;
+        return { name, den, num, due, ok, note: o.note || '' };
+      });
+
+      const share = sumShares(owners);
+      const shareOk = share.n === share.d && share.d === 1n;
+      if (owners.length && !shareOk)
+        warnings.push({ level: 'error', msg: `${label} 持分合計為 ${share.n}/${share.d}，不等於 1。`, parcel: pi });
+      allocatedHalf += parcelDue * 2;
+      return { landNo: p.landNo, rows, parcelDue, share, shareOk };
+    });
+
+    const remainder = (feeHalf - allocatedHalf) / 2;
+
+    // ---- 個人彙總（同一人跨多筆合併計算） ----
+    const persons = c.persons || {};
+    const order = [];
+    const map = new Map();
+    for (const pr of parcelResults) {
+      for (const r of pr.rows) {
+        if (!r.name) continue;
+        if (!map.has(r.name)) {
+          map.set(r.name, { due: 0, parcels: [] });
+          order.push(r.name);
+        }
+        const m = map.get(r.name);
+        m.due += r.due;
+        m.parcels.push(`${pr.landNo || '?'}(${r.num}/${r.den})`);
+      }
+    }
+
+    const applicant = applicantOf(c);
+    if (!applicant) {
+      warnings.push({ level: 'error', msg: '尚未指定申請人，差額與界址點費用無人負擔。' });
+    } else if (!map.has(applicant)) {
+      warnings.push({ level: 'warn', msg: `申請人「${applicant}」不在分割後所有權人名單中，請確認姓名。` });
+      map.set(applicant, { due: 0, parcels: [] });
+      order.push(applicant);
+    }
+
+    const people = order.map((name) => {
+      const m = map.get(name);
+      const info = persons[name] || {};
+      const isApplicant = name === applicant;
+      const extra = isApplicant ? remainder + pointFee : 0;
+      const total = m.due + extra;
+      const paid = toInt(info.paid) || 0;
+      const diff = paid - total;
+      let status;
+      if (diff > 0) status = isApplicant ? '溢繳應退' : '溢繳';
+      else if (diff < 0) status = isApplicant ? '應補繳' : '註記欠繳';
+      else status = '已繳清';
+      return {
+        name, isApplicant,
+        parcels: m.parcels,
+        due: m.due, remainder: isApplicant ? remainder : 0, pointFee: isApplicant ? pointFee : 0,
+        total, paid,
+        over: diff > 0 ? diff : 0,
+        owe: diff < 0 ? -diff : 0,
+        status, note: info.note || '',
+      };
+    });
+
+    const sum = (k) => people.reduce((a, p) => a + p[k], 0);
+    return {
+      N, base, survey, pointCount: pointFee / POINT_UNIT, pointFee, pointUnit: POINT_UNIT,
+      halved,
+      grossFee: base + survey,
+      fee,
+      perParcel: N ? fee / N : 0,
+      allocated: allocatedHalf / 2,
+      remainder,
+      applicant,
+      names: order,
+      parcels: parcelResults,
+      people,
+      totals: { due: sum('total'), paid: sum('paid'), over: sum('over'), owe: sum('owe') },
+      warnings,
+    };
+  }
+
+  return { compute, sumShares, personKey, toInt, isHalved, POINT_UNIT };
+});
+
+</script>
+<script>
+/* 共有物分割複丈費清冊 — 介面 */
+(function () {
+  'use strict';
+
+  const APP_VERSION = window.CHANGELOG[0].version;
+  const STORE_KEY = 'courtPartition.v3';
+  const SEEN_KEY = 'courtPartition.seenVersion';
+  const COPIES = [
+    { no: '第一聯', use: '附卷' },
+    { no: '第二聯', use: '移送登記課' },
+  ];
+
+  const $ = (s, el = document) => el.querySelector(s);
+  const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const money = (n) => (Number.isFinite(n) ? n.toLocaleString('zh-TW', { maximumFractionDigits: 2 }) : '—');
+  const uid = () => Math.random().toString(36).slice(2, 10);
+  const blankOwner = () => ({ name: '', den: '', num: '', note: '' });
+  const blankParcel = () => ({ landNo: '', owners: [blankOwner()] });
+  const rocDate = (d = new Date()) => `中華民國 ${d.getFullYear() - 1911} 年 ${d.getMonth() + 1} 月 ${d.getDate()} 日`;
+
+  function newCase() {
+    return {
+      id: uid(), caseNo: '', receiptNo: '', clerk: '',
+      baseFee: '', surveyFee: '', pointCount: '', courtBased: true, needSurvey: false,
+      parcels: [blankParcel()], persons: {}, applicant: '',
+      updatedAt: Date.now(),
+    };
+  }
+
+  function sampleCase() {
+    // 與 Excel v2.1 清冊範例相同
+    const owners = ['劉玉英', '劉玉美', '劉玉春', '劉筱帆'].map((name) => ({ name, den: 4, num: 1, note: '' }));
+    return Object.assign(newCase(), {
+      caseNo: '（範例）114年度訴字第0000號', receiptNo: '114年通數土字第00000號',
+      baseFee: 3000, surveyFee: 1500, courtBased: true, needSurvey: false, applicant: '劉玉美',
+      parcels: [{ landNo: '566', owners }],
+      persons: { '劉玉美': { paid: 3500, note: '' } },
+    });
+  }
+
+  // 舊版（v3.0）案件資料轉換
+  function migrate(c) {
+    if (c.courtBased === undefined) c.courtBased = c.halve ?? true;
+    if (c.needSurvey === undefined) c.needSurvey = false;
+    if (c.applicant === undefined) {
+      const hit = Object.entries(c.persons || {}).find(([, v]) => v && v.applicant);
+      c.applicant = c.remainderTo || (hit ? hit[0] : '');
+    }
+    if (c.pointCount === undefined) c.pointCount = c.pointFee ? String(Math.round(Number(c.pointFee) / Calc.POINT_UNIT)) : '';
+    delete c.halve; delete c.roundMode; delete c.remainderTo; delete c.pointFee;
+    Object.values(c.persons || {}).forEach((v) => v && delete v.applicant);
+    return c;
+  }
+
+  // ---------- 儲存 ----------
+  let db = load();
+  function load() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(STORE_KEY));
+      if (raw && raw.cases && Object.keys(raw.cases).length) {
+        Object.values(raw.cases).forEach(migrate);
+        return raw;
+      }
+    } catch (e) { /* 無法讀取時使用新案件 */ }
+    const c = newCase();
+    return { current: c.id, cases: { [c.id]: c } };
+  }
+  let saveTimer;
+  function save() {
+    cur().updatedAt = Date.now();
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      try { localStorage.setItem(STORE_KEY, JSON.stringify(db)); } catch (e) { /* 私密模式等 */ }
+    }, 250);
+  }
+  const cur = () => db.cases[db.current];
+
+  // ---------- 案件資料表單 ----------
+  function bindForm() {
+    $$('[data-f]').forEach((el) => {
+      el.addEventListener(el.type === 'checkbox' || el.tagName === 'SELECT' ? 'change' : 'input', () => {
+        cur()[el.dataset.f] = el.type === 'checkbox' ? el.checked : el.value;
+        save();
+        if (el.dataset.f === 'caseNo') renderCaseSelect();
+        refresh();
+      });
+    });
+  }
+  function fillForm() {
+    const c = cur();
+    $$('[data-f]').forEach((el) => {
+      const v = c[el.dataset.f];
+      if (el.type === 'checkbox') el.checked = !!v;
+      else el.value = v ?? '';
+    });
+  }
+
+  function renderCaseSelect() {
+    const sel = $('#caseSelect');
+    const list = Object.values(db.cases).sort((a, b) => b.updatedAt - a.updatedAt);
+    sel.innerHTML = list.map((c) =>
+      `<option value="${c.id}" ${c.id === db.current ? 'selected' : ''}>${esc(c.caseNo || '（未命名案件）')}</option>`).join('');
+  }
+
+  // ---------- 地號卡片 ----------
+  function renderParcels() {
+    const c = cur();
+    $('#countInput').value = c.parcels.length;
+    $('#parcels').innerHTML = c.parcels.map((p, pi) => `
+      <article class="parcel" data-pi="${pi}" style="--i:${pi}">
+        <header>
+          <span class="pno">${pi + 1}</span>
+          <label class="land">地號<input data-p="landNo" value="${esc(p.landNo)}" placeholder="地號"></label>
+          <span class="chip" data-share="${pi}"></span>
+          <span class="subtotal">小計 <b data-psum="${pi}">0</b> 元</span>
+          <div class="pact">
+            ${pi > 0 ? '<button class="btn ghost sm" data-act="copyPrev" title="複製上一筆的共有人名單">⧉ 沿用上一筆名單</button>' : ''}
+            <button class="btn ghost sm danger" data-act="delParcel" title="刪除此筆">刪除</button>
+          </div>
+        </header>
+        <div class="table-wrap">
+          <table class="tbl">
+            <thead><tr><th class="n">#</th><th>共有人姓名</th><th class="num">分母</th><th class="num">分子</th><th class="num">應繳測量費</th><th>備註</th><th></th></tr></thead>
+            <tbody>
+              ${p.owners.map((o, oi) => `
+              <tr data-oi="${oi}">
+                <td class="n">${oi + 1}</td>
+                <td><input data-o="name" value="${esc(o.name)}" placeholder="姓名（公同共有請寫在同一列）" list="nameList"></td>
+                <td class="num"><input data-o="den" value="${esc(o.den)}" inputmode="numeric" class="short"></td>
+                <td class="num"><input data-o="num" value="${esc(o.num)}" inputmode="numeric" class="short"></td>
+                <td class="num due" data-due="${pi}-${oi}">0</td>
+                <td><input data-o="note" value="${esc(o.note)}"></td>
+                <td><button class="btn icon sm" data-act="delOwner" aria-label="刪除此列">✕</button></td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+        <button class="btn ghost sm add" data-act="addOwner">＋ 新增共有人</button>
+      </article>`).join('') + '<datalist id="nameList"></datalist>';
+    refresh();
+  }
+
+  function onParcelsInput(e) {
+    const el = e.target;
+    const card = el.closest('.parcel');
+    if (!card) return;
+    const p = cur().parcels[+card.dataset.pi];
+    if (el.dataset.p) p[el.dataset.p] = el.value;
+    if (el.dataset.o) p.owners[+el.closest('tr').dataset.oi][el.dataset.o] = el.value;
+    save();
+    refresh();
+  }
+
+  function onParcelsClick(e) {
+    const btn = e.target.closest('[data-act]');
+    if (!btn) return;
+    const card = btn.closest('.parcel');
+    const pi = +card.dataset.pi;
+    const c = cur();
+    const p = c.parcels[pi];
+    switch (btn.dataset.act) {
+      case 'addOwner':
+        p.owners.push(blankOwner());
+        break;
+      case 'delOwner': {
+        const oi = +btn.closest('tr').dataset.oi;
+        const o = p.owners[oi];
+        if ((o.name || o.den || o.num) && !confirm(`確定刪除「${o.name || '此列'}」？`)) return;
+        p.owners.splice(oi, 1);
+        if (!p.owners.length) p.owners.push(blankOwner());
+        break;
+      }
+      case 'copyPrev':
+        if (hasData(p) && !confirm('此筆已有資料，確定以上一筆的名單覆蓋？')) return;
+        p.owners = c.parcels[pi - 1].owners.map((o) => ({ ...o, note: '' }));
+        break;
+      case 'delParcel':
+        if (hasData(p) && !confirm(`確定刪除第 ${pi + 1} 筆（地號 ${p.landNo || '未填'}）？`)) return;
+        c.parcels.splice(pi, 1);
+        break;
+      default: return;
+    }
+    save();
+    renderParcels();
+  }
+
+  const hasData = (p) => !!(String(p.landNo).trim() || p.owners.some((o) => o.name || o.den || o.num));
+
+  function applyCount(n) {
+    const c = cur();
+    n = Math.floor(Number(n));
+    if (!Number.isFinite(n) || n < 1) { toast('分割後筆數至少為 1'); $('#countInput').value = c.parcels.length; return; }
+    if (n > 200) { toast('筆數過多（上限 200）'); return; }
+    if (n < c.parcels.length) {
+      const removed = c.parcels.slice(n);
+      const filled = removed.filter(hasData).length;
+      if (filled && !confirm(`將移除最後 ${removed.length} 筆，其中 ${filled} 筆已有資料，確定？`)) {
+        $('#countInput').value = c.parcels.length;
+        return;
+      }
+      c.parcels.length = n;
+    }
+    while (c.parcels.length < n) c.parcels.push(blankParcel());
+    save();
+    renderParcels();
+  }
+
+  // ---------- 計算與畫面更新 ----------
+  let last;
+  function refresh() {
+    const c = cur();
+    const r = (last = Calc.compute(c));
+
+    // 地號卡片計算值
+    r.parcels.forEach((pr, pi) => {
+      pr.rows.forEach((row, oi) => {
+        const td = $(`[data-due="${pi}-${oi}"]`);
+        if (td) td.textContent = row.ok ? money(row.due) : '—';
+      });
+      const sum = $(`[data-psum="${pi}"]`);
+      if (sum) sum.textContent = money(pr.parcelDue);
+      const chip = $(`[data-share="${pi}"]`);
+      if (chip) {
+        chip.textContent = pr.shareOk ? '持分合計 1 ✓' : `持分合計 ${pr.share.n}/${pr.share.d}`;
+        chip.classList.toggle('bad', !pr.shareOk);
+      }
+    });
+    $('#nameList') && ($('#nameList').innerHTML = r.people.map((p) => `<option value="${esc(p.name)}">`).join(''));
+
+    $('#halveNote').textContent = r.halved
+      ? '✓ 適用收費標準第 6 條：依已核定測量成果辦理，無需實地測量，規費按半數計收。'
+      : c.needSurvey
+        ? '✗ 需實地測量或確定界址點，不適用第 6 條減半，按原價計收。'
+        : '✗ 非依法院確定判決／調處結果申請，按原價計收。';
+    $('#halveNote').classList.toggle('on', r.halved);
+
+    // KPI
+    $('#kpis').innerHTML = [
+      ['規費合計', r.grossFee, `基本費 ${money(r.base)} + 施測費 ${money(r.survey)}`],
+      [r.halved ? '減半後應徵' : '應徵規費（原價）', r.fee, r.halved ? '收費標準第 6 條半數計收' : '不適用減半'],
+      ['每筆均分', r.perParcel, `÷ 分割後 ${r.N} 筆`],
+      ['已分配', r.allocated, '各共有人應繳合計'],
+      ['差額（申請人）', r.remainder, r.applicant ? `由 ${r.applicant} 負擔` : '尚未指定申請人', 'accent'],
+      ['界址點費用', r.pointFee, `${r.pointCount} 點 × ${r.pointUnit} 元，申請人負擔`],
+      ['欠繳合計', r.totals.owe, '未會同人註記欠繳', r.totals.owe ? 'warn' : ''],
+      ['應退合計', r.totals.over, '溢繳應退還', r.totals.over ? 'ok' : ''],
+    ].map(([k, v, s, cls]) => `<div class="kpi ${cls || ''}"><span class="k">${k}</span><span class="v">${money(v)}</span><span class="s">${esc(s)}</span></div>`).join('');
+
+    renderPeople(r);
+    renderWarnings(r);
+  }
+
+  function renderPeople(r) {
+    const c = cur();
+    const tbl = $('#people');
+    const editing = tbl.contains(document.activeElement);
+    if (editing) {
+      // 正在輸入時只更新計算欄，避免游標跳走
+      r.people.forEach((p) => {
+        const tr = tbl.querySelector(`tr[data-name="${CSS.escape(p.name)}"]`);
+        if (!tr) return;
+        tr.querySelector('[data-c="extra"]').textContent = money(p.remainder + p.pointFee);
+        tr.querySelector('[data-c="total"]').textContent = money(p.total);
+        tr.querySelector('[data-c="over"]').textContent = money(p.over);
+        tr.querySelector('[data-c="owe"]').textContent = money(p.owe);
+        const st = tr.querySelector('[data-c="status"]');
+        st.textContent = p.status;
+        st.className = 'status ' + statusCls(p.status);
+      });
+    } else {
+      tbl.innerHTML = `
+        <thead><tr>
+          <th>姓名</th><th>申請人</th><th>分配地號（持分）</th><th class="num">應繳</th><th class="num">差額＋界址點</th>
+          <th class="num">應繳合計</th><th class="num">已繳</th><th class="num">溢繳</th><th class="num">欠繳</th><th>狀態</th><th>備註</th>
+        </tr></thead>
+        <tbody>${r.people.map((p) => `
+          <tr data-name="${esc(p.name)}" class="${p.isApplicant ? 'bearer' : ''}">
+            <td><b>${esc(p.name)}</b></td>
+            <td><label class="radio" title="設為申請人"><input type="radio" name="applicantRadio" data-pp="applicant" ${p.isApplicant ? 'checked' : ''}><span></span></label></td>
+            <td class="muted">${esc(p.parcels.join('、'))}</td>
+            <td class="num">${money(p.due)}</td>
+            <td class="num" data-c="extra">${money(p.remainder + p.pointFee)}</td>
+            <td class="num strong" data-c="total">${money(p.total)}</td>
+            <td class="num"><input data-pp="paid" value="${esc((c.persons[p.name] || {}).paid ?? '')}" inputmode="numeric" class="short" placeholder="0"></td>
+            <td class="num" data-c="over">${money(p.over)}</td>
+            <td class="num" data-c="owe">${money(p.owe)}</td>
+            <td><span data-c="status" class="status ${statusCls(p.status)}">${p.status}</span></td>
+            <td><input data-pp="note" value="${esc(p.note)}"></td>
+          </tr>`).join('') || '<tr><td colspan="11" class="muted center">請先在上方填寫共有人姓名</td></tr>'}
+        </tbody>
+        <tfoot><tr>
+          <td colspan="5">合計</td><td class="num">${money(r.totals.due)}</td><td class="num">${money(r.totals.paid)}</td>
+          <td class="num">${money(r.totals.over)}</td><td class="num">${money(r.totals.owe)}</td><td colspan="2"></td>
+        </tr></tfoot>`;
+    }
+    const sel = $('#applicantSel');
+    if (document.activeElement !== sel) {
+      sel.innerHTML = '<option value="">（請選擇申請人）</option>' +
+        r.names.map((n) => `<option ${n === r.applicant ? 'selected' : ''}>${esc(n)}</option>`).join('');
+    }
+  }
+
+  const statusCls = (s) => ({ '註記欠繳': 'warn', '應補繳': 'warn', '溢繳應退': 'ok', '溢繳': 'ok', '已繳清': 'done' }[s] || '');
+
+  function onPeopleInput(e) {
+    const el = e.target;
+    const tr = el.closest('tr[data-name]');
+    if (!tr || !el.dataset.pp) return;
+    const name = tr.dataset.name;
+    const persons = cur().persons;
+    if (el.dataset.pp === 'applicant') {
+      cur().applicant = name;
+      el.blur();
+    } else {
+      const info = (persons[name] = persons[name] || {});
+      info[el.dataset.pp] = el.value;
+    }
+    save();
+    refresh();
+  }
+
+  function renderWarnings(r) {
+    const ul = $('#warnings');
+    const card = $('#warnCard');
+    card.classList.toggle('clean', !r.warnings.length);
+    ul.innerHTML = r.warnings.length
+      ? r.warnings.map((w) => `<li class="${w.level}">${esc(w.msg)}</li>`).join('')
+      : '<li class="ok">全部檢核通過，可以列印。</li>';
+  }
+
+  // ---------- 列印（1式2份） ----------
+  function buildPrint() {
+    const c = cur();
+    const r = Calc.compute(c);
+    const today = rocDate();
+    const parcelsHtml = r.parcels.map((pr) => `
+      <table class="ptbl">
+        <thead>
+          <tr><th colspan="5" class="cap">地號：${esc(pr.landNo || '（未填）')}　　持分合計：${pr.shareOk ? '1' : `${pr.share.n}/${pr.share.d}（有誤）`}</th></tr>
+          <tr><th style="width:2.2em">#</th><th>共有人姓名</th><th style="width:6em">持分</th><th style="width:7em">應繳測量費</th><th>備註</th></tr>
+        </thead>
+        <tbody>${pr.rows.map((row, i) => `
+          <tr><td class="c">${i + 1}</td><td>${esc(row.name)}</td><td class="c">${row.num}/${row.den}</td><td class="r">${money(row.due)}</td><td>${esc(row.note)}</td></tr>`).join('')}
+        </tbody>
+        <tfoot><tr><td colspan="3" class="r">小計</td><td class="r">${money(pr.parcelDue)}</td><td></td></tr></tfoot>
+      </table>`).join('');
+
+    const peopleHtml = `
+      <table class="ptbl">
+        <thead>
+          <tr><th colspan="9" class="cap">各共有人應繳彙總</th></tr>
+          <tr><th>姓名</th><th>身分</th><th>應繳</th><th>差額＋界址點</th><th>應繳合計</th><th>已繳</th><th>溢繳（應退）</th><th>欠繳</th><th>處理</th></tr>
+        </thead>
+        <tbody>${r.people.map((p) => `
+          <tr><td>${esc(p.name)}</td><td class="c">${p.isApplicant ? '申請人' : '未會同'}</td><td class="r">${money(p.due)}</td>
+          <td class="r">${money(p.remainder + p.pointFee)}</td><td class="r b">${money(p.total)}</td><td class="r">${money(p.paid)}</td>
+          <td class="r">${money(p.over)}</td><td class="r">${money(p.owe)}</td><td class="c">${p.status}${p.note ? '<br><small>' + esc(p.note) + '</small>' : ''}</td></tr>`).join('')}
+        </tbody>
+        <tfoot><tr><td colspan="4" class="r">合計</td><td class="r b">${money(r.totals.due)}</td><td class="r">${money(r.totals.paid)}</td>
+          <td class="r">${money(r.totals.over)}</td><td class="r">${money(r.totals.owe)}</td><td></td></tr></tfoot>
+      </table>`;
+
+    const feeHtml = `
+      <table class="ptbl fee">
+        <tr><th>基本費</th><th>施測費</th><th>合計</th><th>${r.halved ? '規費減半' : '應徵規費(原價)'}</th><th>分割後筆數</th><th>每筆均分</th><th>已分配</th><th>差額（申請人）</th><th>界址點費用</th></tr>
+        <tr><td>${money(r.base)}</td><td>${money(r.survey)}</td><td>${money(r.grossFee)}</td><td>${money(r.fee)}</td><td>${r.N}</td>
+        <td>${money(r.perParcel)}</td><td>${money(r.allocated)}</td><td>${money(r.remainder)}</td><td>${money(r.pointFee)}${r.pointCount ? `<br><small>${r.pointCount}點</small>` : ''}</td></tr>
+      </table>`;
+
+    const copy = (cp) => `
+      <section class="sheet">
+        <div class="copy-tag">${cp.no}<br><small>${cp.use}</small></div>
+        <h1>共有物分割土地複丈費分擔清冊</h1>
+        <table class="meta">
+          <tr><th>判決確定共有物分割案號</th><td>${esc(c.caseNo)}</td><th>收件字號</th><td>${esc(c.receiptNo)}</td></tr>
+          <tr><th>製表日期</th><td>${today}</td><th>計收方式</th><td>${r.halved ? '依收費標準第 6 條半數計收' : (c.needSurvey ? '需實地測量／確定界址點，原價計收' : '原價計收')}</td></tr>
+        </table>
+        ${feeHtml}
+        ${parcelsHtml}
+        ${peopleHtml}
+        <p class="basis">依據：114.7.17 研商部分共有人申辦共有物分割複丈案件收費原則會議紀錄議題二。規費依分割後筆數均分，維持共有者依持分分算，無條件捨去至整數，餘數及確定分割界址點費用由申請人繳納；依法院確定判決等申請而無需實地測量者，依收費標準第 6 條半數計收；未會同申請之共有人依內政部 90.6.22 台（90）內地字第 9073215 號函註記欠繳。</p>
+        ${r.warnings.some((w) => w.level === 'error') ? '<p class="err">※ 本清冊仍有檢核錯誤，請修正後再列印。</p>' : ''}
+        <div class="sign">
+          <div>承辦人<span>${esc(c.clerk)}</span></div><div>課長<span></span></div><div>主任<span></span></div>
+        </div>
+        <div class="pfoot">${cp.no}（${cp.use}） · 共 2 聯 · 系統版本 v${APP_VERSION}</div>
+      </section>`;
+    $('#print-root').innerHTML = COPIES.map(copy).join('');
+    return r;
+  }
+
+  function doPrint() {
+    const r = buildPrint();
+    const errs = r.warnings.filter((w) => w.level === 'error');
+    if (errs.length && !confirm(`尚有 ${errs.length} 項檢核錯誤：\n\n${errs.map((w) => '・' + w.msg).join('\n')}\n\n仍要列印嗎？`)) return;
+    const title = document.title;
+    document.title = `複丈費清冊_${cur().caseNo || '未命名'}`;
+    window.print();
+    document.title = title;
+  }
+
+  // ---------- 匯出／匯入 ----------
+  function download(name, content, type) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([content], { type }));
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+  const fileBase = () => `複丈費清冊_${(cur().caseNo || '未命名').replace(/[\\/:*?"<>|]/g, '_')}`;
+
+  function exportCsv() {
+    const r = Calc.compute(cur());
+    const q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const lines = [['地號', '共有人姓名', '分母', '分子', '應繳測量費', '備註']];
+    r.parcels.forEach((pr) => pr.rows.forEach((row) => lines.push([pr.landNo, row.name, row.den, row.num, row.due, row.note])));
+    lines.push([], ['姓名', '身分', '應繳', '差額', '界址點費', '應繳合計', '已繳', '溢繳', '欠繳', '處理', '備註']);
+    r.people.forEach((p) => lines.push([p.name, p.isApplicant ? '申請人' : '未會同', p.due, p.remainder, p.pointFee, p.total, p.paid, p.over, p.owe, p.status, p.note]));
+    download(fileBase() + '.csv', '﻿' + lines.map((l) => l.map(q).join(',')).join('\r\n'), 'text/csv;charset=utf-8');
+  }
+
+  function importJson(file) {
+    const fr = new FileReader();
+    fr.onload = () => {
+      try {
+        const c = JSON.parse(fr.result);
+        if (!Array.isArray(c.parcels)) throw new Error('格式不符');
+        c.id = uid();
+        c.persons = c.persons || {};
+        migrate(c);
+        db.cases[c.id] = c;
+        db.current = c.id;
+        save();
+        loadCurrent();
+        toast('已匯入案件');
+      } catch (e) {
+        alert('匯入失敗：' + e.message);
+      }
+    };
+    fr.readAsText(file);
+  }
+
+  // ---------- 版本 ----------
+  function renderTimeline(highlight) {
+    $('#tlList').innerHTML = window.CHANGELOG.map((v, i) => `
+      <li class="${i === 0 ? 'latest' : ''} ${highlight === v.version ? 'fresh' : ''}">
+        <div class="tl-head"><span class="tl-ver">v${esc(v.version)}</span><span class="tl-date">${esc(v.date)}</span>${i === 0 ? '<span class="tl-tag">目前版本</span>' : ''}</div>
+        <div class="tl-title">${esc(v.title)}</div>
+        <ul>${v.highlights.map((h) => `<li>${esc(h)}</li>`).join('')}</ul>
+      </li>`).join('');
+  }
+  function openTimeline(highlight) {
+    renderTimeline(highlight);
+    $('#timeline').showModal();
+  }
+
+  const newer = (a, b) => {
+    const pa = a.split('.').map(Number), pb = b.split('.').map(Number);
+    for (let i = 0; i < 3; i++) if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) > (pb[i] || 0);
+    return false;
+  };
+  const SITE = 'https://gn01918004-hub.github.io/courtPartition-/';
+  const DOWNLOAD = 'https://github.com/gn01918004-hub/courtPartition-/releases/latest';
+  async function checkUpdate() {
+    const standalone = !!window.STANDALONE;
+    if (!standalone && location.protocol === 'file:') return;
+    try {
+      const res = await fetch(`${standalone ? SITE : ''}version.json?t=${Date.now()}`, { cache: 'no-store' });
+      const v = await res.json();
+      if (v.version && newer(v.version, APP_VERSION)) {
+        const b = $('#updateBanner');
+        b.innerHTML = standalone
+          ? `✨ 有新版本 v${esc(v.version)}，請下載新的 HTML 檔取代此檔（案件資料可先「匯出 JSON」備份） <a class="btn primary sm" href="${DOWNLOAD}" target="_blank" rel="noopener">下載新版</a>`
+          : `✨ 有新版本 v${esc(v.version)} 可用 <button class="btn primary sm">立即更新</button>`;
+        b.hidden = false;
+        const btn = b.querySelector('button');
+        if (btn) btn.onclick = () => { location.href = `${location.pathname}?v=${encodeURIComponent(v.version)}`; };
+      }
+    } catch (e) { /* 離線時略過 */ }
+  }
+
+  function toast(msg) {
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2400);
+  }
+
+  // ---------- 啟動 ----------
+  function loadCurrent() {
+    fillForm();
+    renderCaseSelect();
+    renderParcels();
+  }
+
+  function onToolbar(e) {
+    const act = e.target.closest('[data-act]')?.dataset.act;
+    const c = cur();
+    switch (act) {
+      case 'new': {
+        const n = newCase();
+        db.cases[n.id] = n; db.current = n.id; save(); loadCurrent(); break;
+      }
+      case 'sample': {
+        const s = sampleCase();
+        db.cases[s.id] = s; db.current = s.id; save(); loadCurrent(); toast('已載入 Excel v2.1 範例'); break;
+      }
+      case 'import': $('#importFile').click(); break;
+      case 'export': {
+        const { id, ...data } = c;
+        download(fileBase() + '.json', JSON.stringify({ ...data, appVersion: APP_VERSION }, null, 2), 'application/json');
+        break;
+      }
+      case 'csv': exportCsv(); break;
+      case 'delete': {
+        if (!confirm(`確定刪除案件「${c.caseNo || '未命名'}」？此動作無法復原。`)) return;
+        delete db.cases[c.id];
+        const rest = Object.values(db.cases).sort((a, b) => b.updatedAt - a.updatedAt);
+        if (!rest.length) { const n = newCase(); db.cases[n.id] = n; rest.push(n); }
+        db.current = rest[0].id; save(); loadCurrent(); break;
+      }
+      case 'print': doPrint(); break;
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    $('#versionBtn').textContent = 'v' + APP_VERSION;
+    $('#footVer').textContent = `版本 v${APP_VERSION}（${window.CHANGELOG[0].date}）`;
+    $('#versionBtn').onclick = () => openTimeline();
+    $('#timeline').addEventListener('click', (e) => {
+      if (e.target.matches('[data-close]') || e.target === $('#timeline')) $('#timeline').close();
+    });
+
+    $('.toolbar').addEventListener('click', onToolbar);
+    $('#caseSelect').onchange = (e) => { db.current = e.target.value; save(); loadCurrent(); };
+    $('#importFile').onchange = (e) => { if (e.target.files[0]) importJson(e.target.files[0]); e.target.value = ''; };
+
+    const step = (d) => { const i = $('#countInput'); i.value = Math.max(1, (+i.value || 0) + d); };
+    document.querySelector('.stepper').addEventListener('click', (e) => {
+      const act = e.target.closest('[data-act]')?.dataset.act;
+      if (act === 'inc') step(1);
+      if (act === 'dec') step(-1);
+      if (act === 'apply') applyCount($('#countInput').value);
+    });
+    $('#countInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') applyCount(e.target.value); });
+
+    $('#parcels').addEventListener('input', onParcelsInput);
+    $('#parcels').addEventListener('click', onParcelsClick);
+    $('#people').addEventListener('input', onPeopleInput);
+    $('#people').addEventListener('focusout', () => setTimeout(() => last && !$('#people').contains(document.activeElement) && refresh()));
+    $('#applicantSel').onchange = (e) => { cur().applicant = e.target.value; save(); e.target.blur(); refresh(); };
+
+    bindForm();
+    loadCurrent();
+    window.addEventListener('beforeprint', buildPrint);
+
+    // 首次開啟新版本時自動顯示更新重點
+    let seen = null;
+    try { seen = localStorage.getItem(SEEN_KEY); } catch (e) { /* 略過 */ }
+    if (seen !== APP_VERSION) {
+      if (seen) openTimeline(APP_VERSION);
+      try { localStorage.setItem(SEEN_KEY, APP_VERSION); } catch (e) { /* 略過 */ }
+    }
+    checkUpdate();
+    setInterval(checkUpdate, 30 * 60 * 1000);
+  });
+})();
+
+</script>
+</body>
+</html>
