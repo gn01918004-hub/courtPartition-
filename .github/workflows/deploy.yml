@@ -52,13 +52,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: 版本號有變更時建立 Release
+      - name: 建立 Release 並附上單檔版
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           VER=$(node -p "require('./version.json').version")
+          # 附件檔名須為英數（GitHub 會刪除中文字），中文名稱放在顯示標籤
+          ASSET="courtPartition_v$VER.html"
+          cp "dist/共有物分割複丈費清冊.html" "$ASSET"
           if gh release view "v$VER" >/dev/null 2>&1; then
-            echo "v$VER 已存在，略過"; exit 0
+            echo "v$VER 已存在，更新附件"
+            gh release delete-asset "v$VER" "_v$VER.html" --yes 2>/dev/null || true
+            gh release upload "v$VER" "$ASSET#共有物分割複丈費清冊 v$VER（單檔版）" --clobber
+            exit 0
           fi
           NOTES=$(node -e "
             const ctx={window:{}};
@@ -66,6 +72,5 @@ jobs:
             const v=ctx.window.CHANGELOG[0];
             console.log('## '+v.title+'\n\n'+v.highlights.map(h=>'- '+h).join('\n'));
           ")
-          cp "dist/共有物分割複丈費清冊.html" "共有物分割複丈費清冊_v$VER.html"
           gh release create "v$VER" --title "v$VER" --notes "$NOTES" --target "$GITHUB_SHA" \
-            "共有物分割複丈費清冊_v$VER.html"
+            "$ASSET#共有物分割複丈費清冊 v$VER（單檔版）"
