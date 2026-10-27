@@ -27,7 +27,7 @@
         <h1>共有物分割複丈費清冊</h1>
         <p class="sub">法院判決／和解／調解／調處 · 各共有人應繳規費計算</p>
       </div>
-      <button id="versionBtn" class="badge" title="查看更新時間軸">v—</button>
+      <button id="versionBtn" class="badge vbtn" title="版本更新紀錄" aria-haspopup="dialog"><span id="verTag">v—</span><span class="vlbl">・更新內容</span><i class="vdot" id="verDot" hidden></i></button>
     </div>
     <div class="toolbar">
       <select id="caseSelect" title="切換案件"></select>
@@ -35,6 +35,7 @@
       <button class="btn" data-act="sample">載入範例</button>
       <button class="btn" data-act="import">匯入</button>
       <button class="btn" data-act="export">匯出 JSON</button>
+      <button class="btn" data-act="backup" title="下載所有案件的備份檔">下載備份</button>
       <button class="btn" data-act="csv">匯出 CSV</button>
       <button class="btn danger" data-act="delete">刪除案件</button>
       <button class="btn" data-act="notify" id="notifyBtn" title="有新版本時跳出桌面通知">🔔 更新通知</button>
@@ -43,7 +44,6 @@
     </div>
   </header>
 
-  <div id="updateBanner" class="banner" hidden></div>
 
   <main>
     <section class="grid-2">
@@ -133,12 +133,27 @@
   </footer>
 </div>
 
-<dialog id="timeline">
+<dialog id="vdlg" class="vdlg" aria-labelledby="vTitle">
   <div class="dlg-head">
-    <h2>更新時間軸</h2>
-    <button class="btn icon" data-close aria-label="關閉">✕</button>
+    <h2 id="vTitle">版本更新紀錄</h2>
+    <button class="btn sm" data-close>關閉 Esc</button>
   </div>
-  <ol class="tl" id="tlList"></ol>
+  <div class="dlg-body" id="vBody"></div>
+</dialog>
+
+<dialog id="udlg" class="vdlg" aria-labelledby="uTitle">
+  <div class="dlg-head">
+    <h2 id="uTitle">有新版本可以下載</h2>
+    <button class="btn sm" data-close>稍後再說</button>
+  </div>
+  <div class="dlg-body" id="uBody"></div>
+  <div class="dlg-foot">
+    <button class="btn sm ghost" id="uSkip">略過這個版本</button>
+    <div class="row-gap">
+      <button class="btn" id="uBackup">先下載備份</button>
+      <a class="btn primary" id="uGet" href="#" target="_blank" rel="noopener">下載新版</a>
+    </div>
+  </div>
 </dialog>
 
 <div id="print-root" aria-hidden="true"></div>

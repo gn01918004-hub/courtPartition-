@@ -88,9 +88,9 @@ jobs:
             const repo = process.env.GITHUB_REPOSITORY;
             const site = 'https://' + repo.split('/')[0] + '.github.io/' + repo.split('/')[1] + '/';
             const text = ['📢 共有物分割複丈費清冊 v' + v.version + ' 已發布', '', v.title,
-              ...v.highlights.map(h => '・' + h), '',
+              ...v.items.map(h => '・' + h), '',
               '🌐 網頁版：' + site,
-              '📥 單檔版下載：https://github.com/' + repo + '/releases/tag/v' + v.version].join('\n');
+              '📥 單檔版下載：' + v.download].join('\n');
             require('fs').writeFileSync('line.json', JSON.stringify({ messages: [{ type: 'text', text: text.slice(0, 4900) }] }));
           "
           curl -sS --fail-with-body -X POST https://api.line.me/v2/bot/message/broadcast \

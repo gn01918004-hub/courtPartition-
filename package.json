@@ -1,6 +1,6 @@
 {
   "name": "court-partition",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "private": true,
   "description": "共有物分割複丈費分擔清冊",
   "scripts": {

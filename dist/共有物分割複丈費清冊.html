@@ -296,6 +296,33 @@ main > *, .grid-2 > *, .parcels > * { min-width: 0; }
 .radio input:focus-visible + span { box-shadow: 0 0 0 3px rgba(139, 123, 255, 0.35); }
 .reveal:not([hidden]) { animation: rise 0.25s ease; }
 
+/* 版本按鈕紅點、版本紀錄／新版通知視窗 */
+.vbtn { position: relative; }
+.vbtn .vlbl { color: var(--muted); margin-left: 2px; }
+.vbtn .vdot { position: absolute; top: -3px; right: -3px; width: 9px; height: 9px; border-radius: 50%; background: var(--pink); box-shadow: 0 0 0 3px rgba(255, 95, 162, 0.25), 0 0 10px var(--pink); }
+.vdlg { width: min(620px, calc(100vw - 32px)); }
+.dlg-body { padding: 18px 20px; display: flex; flex-direction: column; gap: 16px; }
+.dlg-foot { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; padding: 12px 20px 16px; border-top: 1px solid var(--line); position: sticky; bottom: 0; background: var(--panel-solid); }
+.row-gap { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.small { font-size: 0.8rem; }
+a.btn { text-decoration: none; display: inline-block; }
+.vnew { border: 1px solid var(--pink); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;
+  background: linear-gradient(180deg, rgba(255, 95, 162, 0.12), transparent 75%); }
+.vnew .vh { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.vnew .badge-new { background: var(--pink); color: #fff; font-family: var(--mono); font-weight: 700; font-size: 0.68rem; letter-spacing: 0.12em; border-radius: 4px; padding: 2px 7px; }
+.vnew .vv { font-family: var(--mono); font-weight: 700; font-size: 1.35rem; }
+.vnew .vd { font-size: 0.75rem; color: var(--muted); }
+.vnew h3 { margin: 0; font-size: 1rem; }
+.vnew ul, .vtl ul { margin: 0; padding-left: 1.2em; font-size: 0.85rem; line-height: 1.7; color: #c7d0e2; }
+.ustep { margin: 6px 0 0; padding-left: 20px; font-size: 0.82rem; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
+.vtl { display: flex; flex-direction: column; gap: 6px; }
+.vtl details { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; background: rgba(5, 8, 16, 0.4); }
+.vtl summary { cursor: pointer; display: flex; gap: 10px; align-items: baseline; font-size: 0.88rem; }
+.vtl summary b { font-family: var(--mono); color: var(--cyan); }
+.vtl summary small { margin-left: auto; color: var(--muted); }
+.vtl details[open] summary { margin-bottom: 6px; }
+@media (max-width: 600px) { .vbtn .vlbl { display: none; } }
+
 </style>
 </head>
 <body>
@@ -309,7 +336,7 @@ main > *, .grid-2 > *, .parcels > * { min-width: 0; }
         <h1>共有物分割複丈費清冊</h1>
         <p class="sub">法院判決／和解／調解／調處 · 各共有人應繳規費計算</p>
       </div>
-      <button id="versionBtn" class="badge" title="查看更新時間軸">v—</button>
+      <button id="versionBtn" class="badge vbtn" title="版本更新紀錄" aria-haspopup="dialog"><span id="verTag">v—</span><span class="vlbl">・更新內容</span><i class="vdot" id="verDot" hidden></i></button>
     </div>
     <div class="toolbar">
       <select id="caseSelect" title="切換案件"></select>
@@ -317,6 +344,7 @@ main > *, .grid-2 > *, .parcels > * { min-width: 0; }
       <button class="btn" data-act="sample">載入範例</button>
       <button class="btn" data-act="import">匯入</button>
       <button class="btn" data-act="export">匯出 JSON</button>
+      <button class="btn" data-act="backup" title="下載所有案件的備份檔">下載備份</button>
       <button class="btn" data-act="csv">匯出 CSV</button>
       <button class="btn danger" data-act="delete">刪除案件</button>
       <button class="btn" data-act="notify" id="notifyBtn" title="有新版本時跳出桌面通知">🔔 更新通知</button>
@@ -325,7 +353,6 @@ main > *, .grid-2 > *, .parcels > * { min-width: 0; }
     </div>
   </header>
 
-  <div id="updateBanner" class="banner" hidden></div>
 
   <main>
     <section class="grid-2">
@@ -415,12 +442,27 @@ main > *, .grid-2 > *, .parcels > * { min-width: 0; }
   </footer>
 </div>
 
-<dialog id="timeline">
+<dialog id="vdlg" class="vdlg" aria-labelledby="vTitle">
   <div class="dlg-head">
-    <h2>更新時間軸</h2>
-    <button class="btn icon" data-close aria-label="關閉">✕</button>
+    <h2 id="vTitle">版本更新紀錄</h2>
+    <button class="btn sm" data-close>關閉 Esc</button>
   </div>
-  <ol class="tl" id="tlList"></ol>
+  <div class="dlg-body" id="vBody"></div>
+</dialog>
+
+<dialog id="udlg" class="vdlg" aria-labelledby="uTitle">
+  <div class="dlg-head">
+    <h2 id="uTitle">有新版本可以下載</h2>
+    <button class="btn sm" data-close>稍後再說</button>
+  </div>
+  <div class="dlg-body" id="uBody"></div>
+  <div class="dlg-foot">
+    <button class="btn sm ghost" id="uSkip">略過這個版本</button>
+    <div class="row-gap">
+      <button class="btn" id="uBackup">先下載備份</button>
+      <a class="btn primary" id="uGet" href="#" target="_blank" rel="noopener">下載新版</a>
+    </div>
+  </div>
 </dialog>
 
 <div id="print-root" aria-hidden="true"></div>
@@ -429,6 +471,18 @@ main > *, .grid-2 > *, .parcels > * { min-width: 0; }
 <script>
 /* 版本時間軸：最新版本放最上面。發布新版時只要在此新增一筆並同步 version.json。 */
 window.CHANGELOG = [
+  {
+    version: '3.3.0',
+    date: '2026-10-27',
+    title: '新版本通知視窗、下載備份',
+    highlights: [
+      '開啟時自動檢查新版本，有新版會跳出通知視窗，詢問是否下載',
+      '通知視窗可先下載備份、稍後再說，或略過這個版本',
+      '版本視窗新增「檢查更新」按鈕，可隨時手動檢查',
+      '更新到新版本後，版本號旁會出現紅點提醒，看過就會消失',
+      '新增「下載備份」：一次備份所有案件，匯入時可整份還原',
+    ],
+  },
   {
     version: '3.2.0',
     date: '2026-10-27',
@@ -1105,7 +1159,11 @@ window.CHANGELOG = [
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([content], { type }));
     a.download = name;
+    a.hidden = true;
+    // 開著對話框時頁面其他部分是 inert，連結要放在對話框內檔名才會生效
+    ($('dialog[open]') || document.body).appendChild(a);
     a.click();
+    a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
   const fileBase = () => `複丈費清冊_${(cur().caseNo || '未命名').replace(/[\\/:*?"<>|]/g, '_')}`;
@@ -1125,16 +1183,21 @@ window.CHANGELOG = [
     const fr = new FileReader();
     fr.onload = () => {
       try {
-        const c = JSON.parse(fr.result);
-        if (!Array.isArray(c.parcels)) throw new Error('格式不符');
-        c.id = uid();
-        c.persons = c.persons || {};
-        migrate(c);
-        db.cases[c.id] = c;
-        db.current = c.id;
+        const data = JSON.parse(fr.result);
+        const list = data && data.app === 'court-partition' && Array.isArray(data.cases) ? data.cases : [data];
+        if (!list.length || list.some((c) => !c || !Array.isArray(c.parcels))) throw new Error('不是本系統的案件或備份檔');
+        if (list.length > 1 && !confirm(`備份檔內有 ${list.length} 件案件，要全部匯入嗎？（會加在現有案件之後，不會覆蓋）`)) return;
+        list.forEach((c) => {
+          c.id = uid();
+          c.persons = c.persons || {};
+          c.updatedAt = c.updatedAt || Date.now();
+          migrate(c);
+          db.cases[c.id] = c;
+          db.current = c.id;
+        });
         save();
         loadCurrent();
-        toast('已匯入案件');
+        toast(list.length > 1 ? `已匯入 ${list.length} 件案件` : '已匯入案件');
       } catch (e) {
         alert('匯入失敗：' + e.message);
       }
@@ -1142,60 +1205,111 @@ window.CHANGELOG = [
     fr.readAsText(file);
   }
 
-  // ---------- 版本 ----------
-  function renderTimeline(highlight) {
-    $('#tlList').innerHTML = window.CHANGELOG.map((v, i) => `
-      <li class="${i === 0 ? 'latest' : ''} ${highlight === v.version ? 'fresh' : ''}">
-        <div class="tl-head"><span class="tl-ver">v${esc(v.version)}</span><span class="tl-date">${esc(v.date)}</span>${i === 0 ? '<span class="tl-tag">目前版本</span>' : ''}</div>
-        <div class="tl-title">${esc(v.title)}</div>
-        <ul>${v.highlights.map((h) => `<li>${esc(h)}</li>`).join('')}</ul>
-      </li>`).join('');
-  }
-  function openTimeline(highlight) {
-    renderTimeline(highlight);
-    $('#timeline').showModal();
+  // ---------- 版本紀錄與檢查更新 ----------
+  // 單檔版讀 GitHub 公開倉庫的 version.json；網頁版讀同站的 version.json
+  const SITE = 'https://gn01918004-hub.github.io/courtPartition-/';
+  const UPDATE_URL = 'https://raw.githubusercontent.com/gn01918004-hub/courtPartition-/HEAD/version.json';
+  const DOWNLOAD_URL = 'https://github.com/gn01918004-hub/courtPartition-/releases/latest';
+  const SKIP_KEY = 'courtPartition.updateSkip';
+  const STANDALONE = !!window.STANDALONE;
+
+  const vcmp = (a, b) => {
+    const x = String(a).split('.').map(Number), y = String(b).split('.').map(Number);
+    for (let i = 0; i < 3; i++) { const d = (x[i] || 0) - (y[i] || 0); if (d) return d; }
+    return 0;
+  };
+  const vnew = (v, date, note, title, items) => `
+    <section class="vnew">
+      <div class="vh"><span class="badge-new">NEW</span><span class="vv">v${esc(v)}</span><span class="vd">${esc(date || '')}・${note}</span></div>
+      <h3>${esc(title)}</h3>
+      ${items && items.length ? `<ul>${items.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>` : ''}
+    </section>`;
+
+  function openVer() {
+    const [now, ...past] = window.CHANGELOG;
+    $('#vBody').innerHTML = vnew(now.version, now.date, '目前版本', '本版新功能：' + now.title, now.highlights) + `
+      <div class="row-gap"><button class="btn sm" id="vCheck">檢查更新</button><span class="muted small">開啟時也會自動檢查</span></div>
+      <div class="vtl">${past.map((r, i) => `
+        <details${i === 0 ? ' open' : ''}><summary><b>v${esc(r.version)}</b><span>${esc(r.title)}</span><small>${esc(r.date)}</small></summary>
+          <ul>${r.highlights.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></details>`).join('')}</div>`;
+    $('#udlg').open && $('#udlg').close();
+    $('#vdlg').showModal();
+    try { localStorage.setItem(SEEN_KEY, APP_VERSION); } catch (e) { /* 略過 */ }
+    $('#verDot').hidden = true;
   }
 
-  const newer = (a, b) => {
-    const pa = a.split('.').map(Number), pb = b.split('.').map(Number);
-    for (let i = 0; i < 3; i++) if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) > (pb[i] || 0);
-    return false;
-  };
-  const SITE = 'https://gn01918004-hub.github.io/courtPartition-/';
-  const DOWNLOAD = 'https://github.com/gn01918004-hub/courtPartition-/releases/latest';
-  async function checkUpdate() {
-    const standalone = !!window.STANDALONE;
-    if (!standalone && location.protocol === 'file:') return;
+  let updInfo = null;
+  const shown = new Set(); // 同一次開啟中，每個版本只自動跳出一次
+  async function checkUpdate(manual) {
+    if (!STANDALONE && location.protocol === 'file:') { if (manual) toast('請用網頁版或單檔版檢查更新'); return; }
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), 8000);
     try {
-      const res = await fetch(`${standalone ? SITE : ''}version.json?t=${Date.now()}`, { cache: 'no-store' });
-      const v = await res.json();
-      if (v.version && newer(v.version, APP_VERSION)) {
-        pushNotify(v, standalone);
-        const b = $('#updateBanner');
-        b.innerHTML = standalone
-          ? `✨ 有新版本 v${esc(v.version)}，請下載新的 HTML 檔取代此檔（案件資料可先「匯出 JSON」備份） <a class="btn primary sm" href="${DOWNLOAD}" target="_blank" rel="noopener">下載新版</a>`
-          : `✨ 有新版本 v${esc(v.version)} 可用 <button class="btn primary sm">立即更新</button>`;
-        b.hidden = false;
-        const btn = b.querySelector('button');
-        if (btn) btn.onclick = () => { location.href = `${location.pathname}?v=${encodeURIComponent(v.version)}`; };
-      }
-    } catch (e) { /* 離線時略過 */ }
+      const res = await fetch(`${STANDALONE ? UPDATE_URL : 'version.json'}?t=${Date.now()}`, { cache: 'no-store', signal: ctl.signal });
+      if (!res.ok) throw new Error(res.status);
+      const info = await res.json();
+      if (!info || !info.version) throw new Error('bad');
+      let skipped = null;
+      try { skipped = localStorage.getItem(SKIP_KEY); } catch (e) { /* 略過 */ }
+      if (vcmp(info.version, APP_VERSION) > 0) {
+        if (manual) showUpdate(info);
+        else if (skipped !== info.version && !shown.has(info.version)) {
+          shown.add(info.version);
+          showUpdate(info);
+          pushNotify(info);
+        }
+      } else if (manual) toast(`目前已是最新版本 v${APP_VERSION}`);
+    } catch (e) {
+      if (manual) toast('無法檢查更新，請確認網路連線後再試');
+    } finally {
+      clearTimeout(t);
+    }
+  }
+
+  function showUpdate(info) {
+    updInfo = info;
+    const steps = STANDALONE
+      ? ['建議先按「先下載備份」保存目前的資料', '按「下載新版」，下載新的 html 檔', '用新的 html 檔取代舊檔，用同一個瀏覽器開啟，原本的資料會保留']
+      : ['建議先按「先下載備份」保存目前的資料', '按「立即更新」重新載入頁面，原本的資料會保留'];
+    $('#uBody').innerHTML = vnew(info.version, info.date, `你目前使用 v${APP_VERSION}`, info.title || '新版本', info.items || info.highlights) + `
+      <div><b class="small">更新方式</b><ol class="ustep">${steps.map((x) => `<li>${x}</li>`).join('')}</ol></div>`;
+    const get = $('#uGet');
+    if (STANDALONE) {
+      get.textContent = '下載新版';
+      get.href = /^https:\/\/github\.com\//.test(info.download || '') ? info.download : DOWNLOAD_URL;
+      get.target = '_blank';
+    } else {
+      get.textContent = '立即更新';
+      get.href = `${location.pathname}?v=${encodeURIComponent(info.version)}`;
+      get.removeAttribute('target');
+    }
+    $('#vdlg').open && $('#vdlg').close();
+    if (!$('#udlg').open) $('#udlg').showModal();
+    get.focus();
+  }
+
+  function exportBackup() {
+    const d = new Date();
+    const ymd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const data = { app: 'court-partition', version: 1, appVersion: APP_VERSION, exportedAt: d.toISOString(), current: db.current, cases: Object.values(db.cases) };
+    download(`court-partition-backup-${ymd}.json`, JSON.stringify(data, null, 1), 'application/json'); // 英文檔名：各系統都能存
+    toast(`已下載備份（${data.cases.length} 件案件）`);
   }
 
   // ---------- 新版桌面通知 ----------
   const NOTIFIED_KEY = 'courtPartition.notifiedVersion';
-  function pushNotify(v, standalone) {
+  function pushNotify(v) {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
     let done = null;
     try { done = localStorage.getItem(NOTIFIED_KEY); } catch (e) { /* 略過 */ }
     if (done === v.version) return; // 每個版本只通知一次
     try {
       const n = new Notification(`共有物分割複丈費清冊 v${v.version} 已發布`, {
-        body: [v.title, ...(v.highlights || []).slice(0, 3).map((h) => '・' + h)].filter(Boolean).join('\n'),
+        body: [v.title, ...(v.items || v.highlights || []).slice(0, 3).map((h) => '・' + h)].filter(Boolean).join('\n'),
         icon: SITE + 'assets/icon-180.png',
         tag: 'courtPartition-update',
       });
-      n.onclick = () => { window.focus(); if (standalone) window.open(DOWNLOAD, '_blank'); else location.href = `${location.pathname}?v=${encodeURIComponent(v.version)}`; };
+      n.onclick = () => { window.focus(); showUpdate(v); };
       localStorage.setItem(NOTIFIED_KEY, v.version);
     } catch (e) { /* 部分瀏覽器不允許在此情境建立通知 */ }
   }
@@ -1214,7 +1328,7 @@ window.CHANGELOG = [
     renderNotifyBtn();
     if (p === 'granted') {
       new Notification('更新通知已開啟', { body: '有新版本時會在這裡通知您（需保持本頁開啟）。', tag: 'courtPartition-update' });
-      checkUpdate();
+      checkUpdate(true);
     }
   }
 
@@ -1252,6 +1366,7 @@ window.CHANGELOG = [
         break;
       }
       case 'csv': exportCsv(); break;
+      case 'backup': exportBackup(); break;
       case 'delete': {
         if (!confirm(`確定刪除案件「${c.caseNo || '未命名'}」？此動作無法復原。`)) return;
         delete db.cases[c.id];
@@ -1265,11 +1380,21 @@ window.CHANGELOG = [
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    $('#versionBtn').textContent = 'v' + APP_VERSION;
+    $('#verTag').textContent = 'v' + APP_VERSION;
     $('#footVer').textContent = `版本 v${APP_VERSION}（${window.CHANGELOG[0].date}）`;
-    $('#versionBtn').onclick = () => openTimeline();
-    $('#timeline').addEventListener('click', (e) => {
-      if (e.target.matches('[data-close]') || e.target === $('#timeline')) $('#timeline').close();
+    $('#versionBtn').onclick = openVer;
+    $$('dialog').forEach((d) => d.addEventListener('click', (e) => {
+      if (e.target.matches('[data-close]') || e.target === d) d.close(); // 點按鈕或背景關閉
+    }));
+    $('#vBody').addEventListener('click', (e) => { if (e.target.id === 'vCheck') checkUpdate(true); });
+    $('#uSkip').onclick = () => {
+      try { localStorage.setItem(SKIP_KEY, updInfo.version); } catch (e) { /* 略過 */ }
+      $('#udlg').close();
+      toast(`已略過 v${updInfo.version}，有更新的版本時會再通知`);
+    };
+    $('#uBackup').onclick = exportBackup;
+    $('#uGet').addEventListener('click', () => {
+      if (STANDALONE) setTimeout(() => toast('下載完成後，用新的 html 檔取代舊檔即可'), 300);
     });
 
     $('.toolbar').addEventListener('click', onToolbar);
@@ -1295,17 +1420,13 @@ window.CHANGELOG = [
     loadCurrent();
     window.addEventListener('beforeprint', buildPrint);
 
-    // 首次開啟新版本時自動顯示更新重點
-    let seen = null;
-    try { seen = localStorage.getItem(SEEN_KEY); } catch (e) { /* 略過 */ }
-    if (seen !== APP_VERSION) {
-      if (seen) openTimeline(APP_VERSION);
-      try { localStorage.setItem(SEEN_KEY, APP_VERSION); } catch (e) { /* 略過 */ }
-    }
+    // 還沒看過本版更新內容時，版本按鈕顯示紅點
+    try { $('#verDot').hidden = localStorage.getItem(SEEN_KEY) === APP_VERSION; } catch (e) { $('#verDot').hidden = false; }
     renderNotifyBtn();
-    checkUpdate();
-    setInterval(checkUpdate, 30 * 60 * 1000);
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdate(); });
+    setTimeout(() => checkUpdate(false), 1200);
+    // 頁面一直開著時，定期檢查（搭配桌面通知）
+    setInterval(() => checkUpdate(false), 30 * 60 * 1000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdate(false); });
   });
 })();
 

@@ -278,3 +278,30 @@ main > *, .grid-2 > *, .parcels > * { min-width: 0; }
 .radio input:checked + span { border-color: var(--violet); background: radial-gradient(circle, var(--violet) 45%, transparent 50%); box-shadow: 0 0 10px rgba(139, 123, 255, 0.6); }
 .radio input:focus-visible + span { box-shadow: 0 0 0 3px rgba(139, 123, 255, 0.35); }
 .reveal:not([hidden]) { animation: rise 0.25s ease; }
+
+/* 版本按鈕紅點、版本紀錄／新版通知視窗 */
+.vbtn { position: relative; }
+.vbtn .vlbl { color: var(--muted); margin-left: 2px; }
+.vbtn .vdot { position: absolute; top: -3px; right: -3px; width: 9px; height: 9px; border-radius: 50%; background: var(--pink); box-shadow: 0 0 0 3px rgba(255, 95, 162, 0.25), 0 0 10px var(--pink); }
+.vdlg { width: min(620px, calc(100vw - 32px)); }
+.dlg-body { padding: 18px 20px; display: flex; flex-direction: column; gap: 16px; }
+.dlg-foot { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; padding: 12px 20px 16px; border-top: 1px solid var(--line); position: sticky; bottom: 0; background: var(--panel-solid); }
+.row-gap { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.small { font-size: 0.8rem; }
+a.btn { text-decoration: none; display: inline-block; }
+.vnew { border: 1px solid var(--pink); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;
+  background: linear-gradient(180deg, rgba(255, 95, 162, 0.12), transparent 75%); }
+.vnew .vh { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.vnew .badge-new { background: var(--pink); color: #fff; font-family: var(--mono); font-weight: 700; font-size: 0.68rem; letter-spacing: 0.12em; border-radius: 4px; padding: 2px 7px; }
+.vnew .vv { font-family: var(--mono); font-weight: 700; font-size: 1.35rem; }
+.vnew .vd { font-size: 0.75rem; color: var(--muted); }
+.vnew h3 { margin: 0; font-size: 1rem; }
+.vnew ul, .vtl ul { margin: 0; padding-left: 1.2em; font-size: 0.85rem; line-height: 1.7; color: #c7d0e2; }
+.ustep { margin: 6px 0 0; padding-left: 20px; font-size: 0.82rem; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
+.vtl { display: flex; flex-direction: column; gap: 6px; }
+.vtl details { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; background: rgba(5, 8, 16, 0.4); }
+.vtl summary { cursor: pointer; display: flex; gap: 10px; align-items: baseline; font-size: 0.88rem; }
+.vtl summary b { font-family: var(--mono); color: var(--cyan); }
+.vtl summary small { margin-left: auto; color: var(--muted); }
+.vtl details[open] summary { margin-bottom: 6px; }
+@media (max-width: 600px) { .vbtn .vlbl { display: none; } }

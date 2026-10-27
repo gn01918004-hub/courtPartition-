@@ -14,7 +14,8 @@ export function versionJson() {
   const ctx = { window: {} };
   vm.runInNewContext(read('assets/changelog.js'), ctx);
   const { version, date, title, highlights } = ctx.window.CHANGELOG[0];
-  return JSON.stringify({ version, date, title, highlights: [...highlights] }, null, 2) + '\n';
+  const download = `https://github.com/gn01918004-hub/courtPartition-/releases/download/v${version}/courtPartition_v${version}.html`;
+  return JSON.stringify({ version, date, title, items: [...highlights], download }, null, 2) + '\n';
 }
 
 export function build() {
