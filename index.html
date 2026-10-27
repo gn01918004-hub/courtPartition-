@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>共有物分割複丈費清冊</title>
+<meta name="description" content="法院判決共有物分割：各共有人應繳土地複丈費計算與清冊列印">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div id="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">
+        <svg viewBox="0 0 32 32"><path d="M4 6h24v20H4z M4 16h24 M16 6v20 M10 6v10 M22 16v10" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+      </div>
+      <div>
+        <h1>共有物分割複丈費清冊</h1>
+        <p class="sub">法院判決／和解／調解／調處 · 各共有人應繳規費計算</p>
+      </div>
+      <button id="versionBtn" class="badge" title="查看更新時間軸">v—</button>
+    </div>
+    <div class="toolbar">
+      <select id="caseSelect" title="切換案件"></select>
+      <button class="btn" data-act="new">＋ 新案件</button>
+      <button class="btn" data-act="sample">載入範例</button>
+      <button class="btn" data-act="import">匯入</button>
+      <button class="btn" data-act="export">匯出 JSON</button>
+      <button class="btn" data-act="csv">匯出 CSV</button>
+      <button class="btn danger" data-act="delete">刪除案件</button>
+      <button class="btn primary" data-act="print">🖨 列印清冊（1式2份）</button>
+      <input type="file" id="importFile" accept=".json,application/json" hidden>
+    </div>
+  </header>
+
+  <div id="updateBanner" class="banner" hidden></div>
+
+  <main>
+    <section class="grid-2">
+      <div class="card">
+        <h2><span class="dot"></span>案件資料</h2>
+        <div class="form">
+          <label class="wide">判決確定共有物分割案號
+            <input data-f="caseNo" placeholder="例：114年度重訴字第123號">
+          </label>
+          <label>收件字號
+            <input data-f="receiptNo" placeholder="例：通數土字第000000號">
+          </label>
+          <label>承辦人
+            <input data-f="clerk">
+          </label>
+          <label>基本費（全案，元）
+            <input data-f="baseFee" inputmode="numeric">
+          </label>
+          <label>施測費（全案，元）
+            <input data-f="surveyFee" inputmode="numeric">
+          </label>
+          <label>確定界址點費用（申請人負擔）
+            <input data-f="pointFee" inputmode="numeric" placeholder="0">
+          </label>
+          <label>捨去方式
+            <select data-f="roundMode">
+              <option value="final">最後一次捨去（同 Excel v2.1）</option>
+              <option value="parcel">每筆均分額先捨去，再依持分捨去</option>
+            </select>
+          </label>
+          <label class="switch wide">
+            <input type="checkbox" data-f="halve">
+            <span class="track"></span>
+            法院確定判決等，規費減半
+          </label>
+        </div>
+      </div>
+
+      <div class="card kpis" id="kpis"></div>
+    </section>
+
+    <section class="card">
+      <div class="row-between">
+        <h2><span class="dot"></span>分割後地號</h2>
+        <div class="stepper">
+          <span>分割後筆數</span>
+          <button class="btn icon" data-act="dec" aria-label="減少一筆">−</button>
+          <input id="countInput" inputmode="numeric">
+          <button class="btn icon" data-act="inc" aria-label="增加一筆">＋</button>
+          <button class="btn accent" data-act="apply">產生表格</button>
+        </div>
+      </div>
+      <p class="hint">分割後仍為公同共有者（判決書多人共同分配一筆），請將所有人名寫在同一列、持分填 1/1，切勿分列，以免影響登記。</p>
+      <div id="parcels" class="parcels"></div>
+    </section>
+
+    <section class="card">
+      <h2><span class="dot"></span>各共有人應繳彙總</h2>
+      <p class="hint">同一人跨多筆地號已自動合併。勾選「申請人」並填寫已繳金額；餘數與界址點費用由「餘數負擔人」繳納。</p>
+      <div class="remainder-pick">
+        餘數負擔人：<select id="remainderTo"></select>
+      </div>
+      <div class="table-wrap"><table class="tbl" id="people"></table></div>
+    </section>
+
+    <section class="card" id="warnCard">
+      <h2><span class="dot warn"></span>檢核</h2>
+      <ul id="warnings" class="warnings"></ul>
+    </section>
+
+    <section class="card basis">
+      <h2><span class="dot"></span>計算依據</h2>
+      <ol>
+        <li>依 114 年 7 月 17 日「研商登記機關受理囑託非屬建築物之位置與面積測量及部分共有人申辦共有物分割複丈案件之收費原則事宜」會議紀錄議題二辦理。</li>
+        <li>各宗土地應徵之分割複丈規費（基本費及施測費）依分割證明文件之分割後土地筆數均分，由分割後土地所有權人繳納。</li>
+        <li>分割後維持共有狀態之地號，再依各共有人持分比例分算應繳規費。</li>
+        <li>計算採無條件捨去法至整數，餘數部分由申請人繳納；確定分割界址點費用由申請人繳納。</li>
+        <li>未會同申請之共有人，依內政部 90 年 6 月 22 日台（90）內地字第 9073215 號函註記欠繳複丈費。</li>
+        <li>分割證明文件已載明複丈費繳納方式或申請人願繳納全額者，不適用本清冊。</li>
+      </ol>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span id="footVer"></span> · 資料僅儲存在本機瀏覽器 · <a href="https://github.com/gn01918004-hub/courtPartition-" target="_blank" rel="noopener">GitHub</a>
+  </footer>
+</div>
+
+<dialog id="timeline">
+  <div class="dlg-head">
+    <h2>更新時間軸</h2>
+    <button class="btn icon" data-close aria-label="關閉">✕</button>
+  </div>
+  <ol class="tl" id="tlList"></ol>
+</dialog>
+
+<div id="print-root" aria-hidden="true"></div>
+
+<script src="assets/changelog.js"></script>
+<script src="assets/calc.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

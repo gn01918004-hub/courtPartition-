@@ -1,0 +1,69 @@
+name: 測試、部署與發布版本
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm test
+
+  # 只有預設分支會部署到 GitHub Pages 並建立版本
+  deploy:
+    needs: test
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.pages.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: 準備網站檔案
+        run: |
+          mkdir -p _site
+          cp -r index.html version.json assets _site/
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: pages
+        uses: actions/deploy-pages@v4
+
+  release:
+    needs: test
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 版本號有變更時建立 Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VER=$(node -p "require('./version.json').version")
+          if gh release view "v$VER" >/dev/null 2>&1; then
+            echo "v$VER 已存在，略過"; exit 0
+          fi
+          NOTES=$(node -e "
+            const ctx={window:{}};
+            require('vm').runInNewContext(require('fs').readFileSync('assets/changelog.js','utf8'),ctx);
+            const v=ctx.window.CHANGELOG[0];
+            console.log('## '+v.title+'\n\n'+v.highlights.map(h=>'- '+h).join('\n'));
+          ")
+          gh release create "v$VER" --title "v$VER" --notes "$NOTES" --target "$GITHUB_SHA"
