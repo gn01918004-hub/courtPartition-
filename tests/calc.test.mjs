@@ -22,6 +22,7 @@ test('Excel v2.1 範例：結果與原試算表一致', () => {
   assert.equal(by['劉玉英'].owe, 562);
   assert.equal(by['劉玉美'].total, 564);
   assert.equal(by['劉玉美'].over, 2936); // 同 Excel F11
+  assert.equal(by['劉玉美'].status, '溢繳');
   assert.equal(r.warnings.filter((w) => w.level === 'error').length, 0);
 });
 
@@ -85,19 +86,22 @@ test('第 6 條：需實地測量或確定界址點時原價計收，界址點�
   assert.equal(by['乙'].total, 2250);
   // 非依判決申請也不減半
   assert.equal(compute({ ...base, courtBased: false }).fee, 4500);
-  // 有界址點卻沒勾選實地測量 → 提醒
-  assert.ok(compute({ ...base, pointCount: 2 }).warnings.some((w) => w.msg.includes('界址點')));
+  // 未勾選實地測量時，界址點不計收（欄位隱藏，殘留的點數不影響結果）
+  const hidden = compute({ ...base, pointCount: 2 });
+  assert.equal(hidden.pointFee, 0);
+  assert.equal(hidden.fee, 2250);
 });
 
 test('相容 v3.0 舊資料（halve、persons.applicant、pointFee）', () => {
   const r = compute({
-    baseFee: 1000, surveyFee: 0, halve: true, pointFee: 400,
+    baseFee: 1000, surveyFee: 0, halve: true, needSurvey: true, pointFee: 400,
     parcels: [{ landNo: '1', owners: owners([['甲', 1, 1]]) }],
     persons: { 甲: { applicant: true } },
   });
-  assert.equal(r.fee, 500);
+  assert.equal(r.fee, 1000);
   assert.equal(r.applicant, '甲');
   assert.equal(r.pointFee, 400);
+  assert.equal(compute({ halve: true, baseFee: 1000, parcels: [] }).fee, 500);
 });
 
 test('減半後出現 .5 元時，餘數保留 .5 給申請人', () => {
@@ -135,4 +139,6 @@ test('dist 單檔版已重新產生（執行 npm run build）', async () => {
   const built = build();
   assert.ok(!/<script src=|<link rel="stylesheet"/.test(built), '仍有外部檔案引用');
   assert.equal(readFileSync(new URL('../' + OUT, import.meta.url), 'utf8'), built, 'dist 過期，請執行 npm run build');
+  const { versionJson } = await import('../scripts/build.mjs');
+  assert.equal(readFileSync(new URL('../version.json', import.meta.url), 'utf8'), versionJson(), 'version.json 過期，請執行 npm run build');
 });

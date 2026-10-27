@@ -5,6 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>共有物分割複丈費清冊</title>
 <meta name="description" content="法院判決共有物分割：各共有人應繳土地複丈費計算與清冊列印">
+<meta name="theme-color" content="#070a12">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%2338e1ff'/%3E%3Cstop offset='.55' stop-color='%238b7bff'/%3E%3Cstop offset='1' stop-color='%23ff5fa2'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23g)'/%3E%3Cpath d='M14 16h36v32H14zM14 32h36M32 16v32M23 16v16M41 32v16' fill='none' stroke='%23fff' stroke-width='4' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="https://gn01918004-hub.github.io/courtPartition-/assets/icon-180.png">
+<meta property="og:type" content="website">
+<meta property="og:title" content="共有物分割複丈費清冊">
+<meta property="og:description" content="法院判決共有物分割：各共有人應繳土地複丈費計算，一鍵列印清冊 1 式 2 份">
+<meta property="og:image" content="https://gn01918004-hub.github.io/courtPartition-/assets/og.png">
+<meta property="og:url" content="https://gn01918004-hub.github.io/courtPartition-/">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
@@ -28,6 +37,7 @@
       <button class="btn" data-act="export">匯出 JSON</button>
       <button class="btn" data-act="csv">匯出 CSV</button>
       <button class="btn danger" data-act="delete">刪除案件</button>
+      <button class="btn" data-act="notify" id="notifyBtn" title="有新版本時跳出桌面通知">🔔 更新通知</button>
       <button class="btn primary" data-act="print">🖨 列印清冊（1式2份）</button>
       <input type="file" id="importFile" accept=".json,application/json" hidden>
     </div>
@@ -55,9 +65,6 @@
           <label>施測費（全案，元）
             <input data-f="surveyFee" inputmode="numeric">
           </label>
-          <label>確定界址點數（每點 200 元，申請人負擔）
-            <input data-f="pointCount" inputmode="numeric" placeholder="0">
-          </label>
           <label class="switch wide">
             <input type="checkbox" data-f="courtBased">
             <span class="track"></span>
@@ -67,6 +74,9 @@
             <input type="checkbox" data-f="needSurvey">
             <span class="track"></span>
             需實地測量或確定界址點（不適用減半，原價計收）
+          </label>
+          <label id="pointField" class="wide reveal" hidden>確定界址點數（每點 200 元，由申請人負擔）
+            <input data-f="pointCount" inputmode="numeric" placeholder="0">
           </label>
           <p class="wide halve-note" id="halveNote"></p>
         </div>

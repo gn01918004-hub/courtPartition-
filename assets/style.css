@@ -277,3 +277,4 @@ main > *, .grid-2 > *, .parcels > * { min-width: 0; }
 .radio span { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--line-strong); transition: 0.15s; }
 .radio input:checked + span { border-color: var(--violet); background: radial-gradient(circle, var(--violet) 45%, transparent 50%); box-shadow: 0 0 10px rgba(139, 123, 255, 0.6); }
 .radio input:focus-visible + span { box-shadow: 0 0 0 3px rgba(139, 123, 255, 0.35); }
+.reveal:not([hidden]) { animation: rise 0.25s ease; }

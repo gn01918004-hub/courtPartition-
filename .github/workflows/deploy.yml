@@ -74,3 +74,25 @@ jobs:
           ")
           gh release create "v$VER" --title "v$VER" --notes "$NOTES" --target "$GITHUB_SHA" \
             "$ASSET#共有物分割複丈費清冊 v$VER（單檔版）"
+          echo "NEW_RELEASE=$VER" >> "$GITHUB_ENV"
+
+      # 新版本發布時，透過 LINE 官方帳號群發給所有好友（需設定 Secret：LINE_CHANNEL_ACCESS_TOKEN）
+      - name: LINE 推播新版本
+        if: env.NEW_RELEASE != ''
+        env:
+          LINE_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+        run: |
+          if [ -z "$LINE_TOKEN" ]; then echo "未設定 LINE_CHANNEL_ACCESS_TOKEN，略過推播"; exit 0; fi
+          node -e "
+            const v = require('./version.json');
+            const repo = process.env.GITHUB_REPOSITORY;
+            const site = 'https://' + repo.split('/')[0] + '.github.io/' + repo.split('/')[1] + '/';
+            const text = ['📢 共有物分割複丈費清冊 v' + v.version + ' 已發布', '', v.title,
+              ...v.highlights.map(h => '・' + h), '',
+              '🌐 網頁版：' + site,
+              '📥 單檔版下載：https://github.com/' + repo + '/releases/tag/v' + v.version].join('\n');
+            require('fs').writeFileSync('line.json', JSON.stringify({ messages: [{ type: 'text', text: text.slice(0, 4900) }] }));
+          "
+          curl -sS --fail-with-body -X POST https://api.line.me/v2/bot/message/broadcast \
+            -H "Authorization: Bearer $LINE_TOKEN" -H "Content-Type: application/json" \
+            -d @line.json

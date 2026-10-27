@@ -71,7 +71,7 @@
    *   baseFee, surveyFee   全案基本費、施測費（元，原價）
    *   courtBased            依法院確定判決或同一效力文件、調處結果申請
    *   needSurvey            需實地測量或確定界址點 → 不適用第 6 條減半，原價計收
-   *   pointCount            確定界址點數（每點 200 元，由申請人負擔，不均分）
+   *   pointCount            確定界址點數（每點 200 元，由申請人負擔，不均分；僅 needSurvey 時計收）
    *   parcels[]             { landNo, owners[]: { name, den, num, note } }
    *   applicant             申請人姓名；捨去後的差額、界址點費用全部由申請人負擔
    *   persons{}             { [姓名]: { paid, note } }
@@ -84,7 +84,8 @@
     const pointCount = c.pointCount === undefined || c.pointCount === ''
       ? Math.round((toInt(c.pointFee) || 0) / POINT_UNIT) // 舊版以金額儲存
       : toInt(c.pointCount);
-    const pointFee = (Number.isInteger(pointCount) && pointCount > 0 ? pointCount : 0) * POINT_UNIT;
+    // 界址點只有在勾選「需實地測量或確定界址點」時才計收
+    const pointFee = c.needSurvey && Number.isInteger(pointCount) && pointCount > 0 ? pointCount * POINT_UNIT : 0;
     const parcels = c.parcels || [];
     const N = parcels.length;
     const halved = isHalved(c);
@@ -95,10 +96,8 @@
 
     if (!Number.isInteger(base) || !Number.isInteger(survey) || base < 0 || survey < 0)
       warnings.push({ level: 'error', msg: '基本費／施測費必須為非負整數。' });
-    if (c.pointCount !== undefined && c.pointCount !== '' && !(Number.isInteger(pointCount) && pointCount >= 0))
+    if (c.needSurvey && c.pointCount !== undefined && c.pointCount !== '' && !(Number.isInteger(pointCount) && pointCount >= 0))
       warnings.push({ level: 'error', msg: '確定界址點數必須為非負整數。' });
-    if (pointFee && !c.needSurvey)
-      warnings.push({ level: 'warn', msg: '有確定界址點時應勾選「需實地測量或確定界址點」（不適用減半）。' });
     if (N === 0) warnings.push({ level: 'warn', msg: '尚未建立任何分割後地號。' });
 
     let allocatedHalf = 0;
@@ -173,7 +172,7 @@
       const paid = toInt(info.paid) || 0;
       const diff = paid - total;
       let status;
-      if (diff > 0) status = isApplicant ? '溢繳應退' : '溢繳';
+      if (diff > 0) status = '溢繳';
       else if (diff < 0) status = isApplicant ? '應補繳' : '註記欠繳';
       else status = '已繳清';
       return {

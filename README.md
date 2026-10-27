@@ -27,11 +27,25 @@
 - 網頁每 30 分鐘檢查一次是否有新版，有新版會出現「立即更新」提示。
 - 每次推送到預設分支，GitHub Actions 會自動：執行測試 → 部署 GitHub Pages → 版本號有變更時建立 [Release](../../releases)。
 
+### 新版推播
+
+| 方式 | 說明 | 設定 |
+|------|------|------|
+| 桌面通知 | 網頁或單檔版按「🔔 開啟更新通知」，之後有新版本會跳出系統通知（每版一次） | 每台電腦按一次允許即可；需有網頁開著 |
+| LINE 推播 | 每次發布新版本，自動由 LINE 官方帳號群發給所有好友 | 見下方，設定一次即可 |
+| GitHub | 在 repo 右上角 **Watch → Custom → Releases**，新版發布會寄 Email | 每人自行訂閱 |
+
+**LINE 推播設定（一次）**
+1. 到 [LINE Developers](https://developers.line.biz/console/) 建立 Provider → 建立 **Messaging API** channel（會同時建立一個 LINE 官方帳號）。
+2. 在 channel 的「Messaging API」分頁最下方，發行 **Channel access token (long-lived)** 並複製。
+3. GitHub repo → **Settings → Secrets and variables → Actions → New repository secret**，名稱 `LINE_CHANNEL_ACCESS_TOKEN`，貼上 token。
+4. 請同事掃描官方帳號 QR code 加好友。之後每次新版本發布就會自動群發（官方帳號免費方案每月有訊息則數上限）。
+
 ### 發布新版步驟
 
 1. 在 `assets/changelog.js` 最上方新增一筆（版本、日期、更新重點）。
-2. 同步修改 `version.json` 與 `package.json` 的 `version`（測試會檢查三者一致）。
-3. `npm run build` 重新產生單檔版，`npm test` 通過後推送。
+2. 同步修改 `package.json` 的 `version`。
+3. `npm run build`（重新產生單檔版與 `version.json`），`npm test` 通過後推送。
 
 > 單檔版會連線檢查 GitHub Pages 上的 `version.json`，有新版時提示下載；離線時自動略過。
 

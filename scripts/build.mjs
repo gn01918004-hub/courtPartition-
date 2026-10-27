@@ -1,5 +1,6 @@
 // 產生單一 HTML 檔（CSS／JS 全部內嵌），可直接用 Email、LINE、隨身碟分享，雙擊即可使用
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -7,6 +8,14 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => readFileSync(join(root, p), 'utf8');
 
 export const OUT = 'dist/共有物分割複丈費清冊.html';
+
+// version.json 由 changelog 產生（網頁、單檔版、通知都讀它）
+export function versionJson() {
+  const ctx = { window: {} };
+  vm.runInNewContext(read('assets/changelog.js'), ctx);
+  const { version, date, title, highlights } = ctx.window.CHANGELOG[0];
+  return JSON.stringify({ version, date, title, highlights: [...highlights] }, null, 2) + '\n';
+}
 
 export function build() {
   let html = read('index.html');
@@ -21,5 +30,6 @@ export function build() {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   mkdirSync(join(root, 'dist'), { recursive: true });
   writeFileSync(join(root, OUT), build());
-  console.log('已產生', OUT);
+  writeFileSync(join(root, 'version.json'), versionJson());
+  console.log('已產生', OUT, '與 version.json');
 }
