@@ -51,6 +51,138 @@
   const personKey = (name) => String(name ?? '').trim().replace(/\s+/g, ' ');
 
   const POINT_UNIT = 200; // 收費標準附表一附註三：確定界址點每點 200 元
+  // 收費標準附表一項次四 土地分割複丈費：基本費依分割前每筆地號面積分級，施測費以線段計
+  const SPLIT_BASE = [1500, 2000, 2500, 3000];
+  const SPLIT_LINE = 500;
+  const TIERS = ['未滿 200 ㎡', '200 以上未滿 1,000 ㎡', '1,000 以上未滿 10,000 ㎡', '10,000 ㎡ 以上'];
+  const tierOf = (a) => (a < 200 ? 0 : a < 1000 ? 1 : a < 10000 ? 2 : 3);
+
+  /** 依分割前地號（面積或級距、筆數）與線段數計算基本費、施測費 */
+  function splitFee(preParcels, lines) {
+    let base = 0;
+    const rows = (preParcels || []).map((r) => {
+      const area = Number(String(r.area ?? '').replace(/[,\s]/g, ''));
+      const tier = area > 0 ? tierOf(area) : Math.min(3, Math.max(0, Number(r.tier) || 0));
+      const q = toInt(r.qty);
+      const qty = Number.isInteger(q) && q > 0 ? q : 1;
+      const filled = area > 0 || !!String(r.landNo ?? '').trim(); // 空白列不計費
+      const fee = filled ? SPLIT_BASE[tier] * qty : 0;
+      base += fee;
+      return { landNo: r.landNo || '', area: area > 0 ? area : null, tier, qty, fee, filled };
+    });
+    const l = toInt(lines);
+    const lineCount = Number.isInteger(l) && l > 0 ? l : 0;
+    return { base, survey: lineCount * SPLIT_LINE, lines: lineCount, rows };
+  }
+
+  // ---- 持分與名單解析（支援 1/4、4分之1、四分之一、萬分之二三四五、全部） ----
+  const CN_DIGIT = { 〇: 0, 零: 0, 一: 1, 壹: 1, 二: 2, 貳: 2, 兩: 2, 三: 3, 參: 3, 四: 4, 肆: 4, 五: 5, 伍: 5, 六: 6, 陸: 6, 七: 7, 柒: 7, 八: 8, 捌: 8, 九: 9, 玖: 9 };
+  const CN_UNIT = { 十: 10, 拾: 10, 百: 100, 佰: 100, 千: 1000, 仟: 1000 };
+  const NUM_CHARS = '0-9〇零一壹二貳兩三參四肆五伍六陸七柒八捌九玖十拾百佰千仟萬億';
+  const toHalfWidth = (s) => String(s ?? '')
+    .replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0))
+    .replace(/[／∕]/g, '/').replace(/\u3000/g, ' ');
+
+  function parseNumber(t) {
+    t = String(t).trim();
+    if (/^\d+$/.test(t)) return Number(t);
+    if (!t || !new RegExp(`^[${NUM_CHARS}]+$`).test(t)) return NaN;
+    // 只有數字字元（如「二三四五」）→ 逐位讀
+    if (!/[十拾百佰千仟萬億]/.test(t)) return Number([...t].map((c) => CN_DIGIT[c]).join(''));
+    let total = 0, section = 0, num = 0;
+    for (const c of t) {
+      if (c in CN_DIGIT) num = CN_DIGIT[c];
+      else if (c in CN_UNIT) { section += (num || 1) * CN_UNIT[c]; num = 0; }
+      else if (c === '萬' || c === '億') {
+        total = (total + section + num || 1) * (c === '萬' ? 10000 : 100000000); // 開頭的「萬」＝一萬
+        section = 0; num = 0;
+      } else if (/\d/.test(c)) num = num * 10 + Number(c);
+    }
+    return total + section + num;
+  }
+
+  /** 解析單一持分文字 → { num, den } 或 null */
+  function parseShare(text) {
+    let t = toHalfWidth(text).replace(/\s+/g, '')
+      .replace(/^(權利範圍|應有部分|持分)[:：]?/, '').replace(/^(公同共有)/, '');
+    if (!t) return null;
+    if (/^(全部|單獨所有|1\/1)$/.test(t)) return { num: 1, den: 1 };
+    let m = t.match(/^(\d+)\/(\d+)$/);
+    if (m) return { num: Number(m[1]), den: Number(m[2]) };
+    m = t.match(new RegExp(`^([${NUM_CHARS}]+)分之([${NUM_CHARS}]+)$`));
+    if (m) {
+      const den = parseNumber(m[1]), num = parseNumber(m[2]);
+      if (Number.isInteger(den) && Number.isInteger(num) && den > 0) return { num, den };
+    }
+    return null;
+  }
+
+  const SHARE_RE = new RegExp(`([${NUM_CHARS}]+分之[${NUM_CHARS}]+|\\d+\\/\\d+|全部|單獨所有)`);
+  const NOISE = /(原告|被告|反訴原告|反訴被告|共有人|姓名|分歸|分配予?|取得|由|按|其|應有部分|權利範圍|持分|維持共有|保持共有|所有|比例)/g;
+
+  /**
+   * 解析貼上的名單文字（判決書主文、Excel 複製、逐行「姓名 持分」）
+   * 回傳 { rows:[{name,num,den,note}], skipped:[原文] }
+   */
+  function parseRoster(text) {
+    const rows = [], skipped = [];
+    const lines = toHalfWidth(text).split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    for (const line of lines) {
+      // Excel／Tab 分隔：姓名 分母 分子（或分子 分母）
+      const cells = line.split(/\t|\s{2,}|,/).map((c) => c.trim()).filter(Boolean);
+      if (cells.length >= 3 && /^\d+$/.test(cells[1]) && /^\d+$/.test(cells[2]) && !SHARE_RE.test(cells[0])) {
+        const a = Number(cells[1]), b = Number(cells[2]);
+        rows.push({ name: cells[0], den: Math.max(a, b), num: Math.min(a, b), note: cells.slice(3).join(' ') });
+        continue;
+      }
+      let found = false;
+      for (const seg of line.split(/[，,；;。]/)) {
+        const m = seg.match(SHARE_RE);
+        if (!m) continue;
+        const share = parseShare(m[1]);
+        if (!share) continue;
+        const joint = /公同共有/.test(seg);
+        const each = /各/.test(seg.slice(0, m.index));
+        let names = seg.slice(0, m.index)
+          .replace(/^\s*[\d一二三四五六七八九十]+[.、．)）]\s*/, '')
+          .replace(/公同共有/g, '').replace(NOISE, '').replace(/各/g, '')
+          .replace(/[:：()（）「」\s]/g, ' ').trim();
+        if (!names) continue;
+        found = true;
+        const list = names.split(/[、及與和\s]+/).filter(Boolean);
+        if (joint) rows.push({ name: `${list.join('、')}（公同共有）`, ...share, note: '' });
+        else if (each && list.length > 1) list.forEach((n) => rows.push({ name: n, ...share, note: '' }));
+        else rows.push({ name: list.join('、'), ...share, note: '' });
+      }
+      if (!found) skipped.push(line);
+    }
+    return { rows, skipped };
+  }
+
+  // ---- 金額大寫（新臺幣○○元整） ----
+  function toChineseAmount(v) {
+    const D = '零壹貳參肆伍陸柒捌玖', U = ['', '拾', '佰', '仟'], BIG = ['', '萬', '億'];
+    let n = Math.floor(Math.abs(v));
+    const jiao = Math.round((Math.abs(v) - n) * 10);
+    if (n === 0 && !jiao) return '零元整';
+    let out = '', g = 0, zero = false;
+    while (n > 0) {
+      const part = n % 10000;
+      if (part) {
+        let s = '', z = false;
+        for (let i = 0; i < 4; i++) {
+          const d = Math.floor(part / 10 ** i) % 10;
+          if (d) { s = D[d] + U[i] + (z ? '零' : '') + s; z = false; }
+          else if (s) z = true;
+        }
+        out = s + BIG[g] + (zero ? '零' : '') + out;
+        zero = part < 1000;
+      } else if (out) zero = true;
+      n = Math.floor(n / 10000); g++;
+    }
+    return (out ? out + '元' : '') + (jiao ? D[jiao] + '角' : '整');
+  }
+
 
   /** 是否減半：收費標準第 6 條，依法院確定判決／調處結果申請，且無需實地測量 */
   function isHalved(c) {
@@ -79,8 +211,11 @@
    */
   function compute(c) {
     const warnings = [];
-    const base = toInt(c.baseFee) || 0;
-    const survey = toInt(c.surveyFee) || 0;
+    const auto = c.feeAuto ? splitFee(c.preParcels, c.lines) : null;
+    const base = auto ? auto.base : toInt(c.baseFee) || 0;
+    const survey = auto ? auto.survey : toInt(c.surveyFee) || 0;
+    if (auto && !auto.rows.some((r) => r.filled)) warnings.push({ level: 'warn', msg: '尚未填寫分割前地號（地號或面積），基本費為 0。' });
+    if (auto && !auto.lines) warnings.push({ level: 'warn', msg: '線段數為 0，施測費為 0。' });
     const pointCount = c.pointCount === undefined || c.pointCount === ''
       ? Math.round((toInt(c.pointFee) || 0) / POINT_UNIT) // 舊版以金額儲存
       : toInt(c.pointCount);
@@ -117,7 +252,7 @@
         if (!name) warnings.push({ level: 'warn', msg: `${label} 第 ${oi + 1} 列未填姓名。`, parcel: pi });
         if (!isPosInt(den) || !isNonNegInt(num)) {
           ok = false;
-          warnings.push({ level: 'error', msg: `${label}「${name || '第 ' + (oi + 1) + ' 列'}」持分分母／分子須為整數且分母大於 0。`, parcel: pi });
+          warnings.push({ level: 'error', msg: `${label}「${name || '第 ' + (oi + 1) + ' 列'}」持分填寫有誤（例：1/4、四分之一）。`, parcel: pi });
         } else if (num > den) {
           ok = false;
           warnings.push({ level: 'error', msg: `${label}「${name}」分子大於分母。`, parcel: pi });
@@ -215,6 +350,7 @@
 
     const sum = (k) => people.reduce((a, p) => a + p[k], 0);
     return {
+      feeMode: auto ? 'auto' : 'manual', auto,
       N, base, survey, pointCount: pointFee / POINT_UNIT, pointFee, pointUnit: POINT_UNIT,
       halved,
       grossFee: base + survey,
@@ -231,5 +367,5 @@
     };
   }
 
-  return { compute, sumShares, personKey, toInt, isHalved, POINT_UNIT };
+  return { compute, sumShares, personKey, toInt, isHalved, POINT_UNIT, SPLIT_BASE, SPLIT_LINE, TIERS, tierOf, splitFee, parseNumber, parseShare, parseRoster, toChineseAmount };
 });

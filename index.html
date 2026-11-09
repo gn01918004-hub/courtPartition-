@@ -33,11 +33,19 @@
       <select id="caseSelect" title="切換案件"></select>
       <button class="btn" data-act="new">＋ 新案件</button>
       <button class="btn" data-act="sample">載入範例</button>
-      <button class="btn" data-act="import">匯入</button>
-      <button class="btn" data-act="export">匯出 JSON</button>
-      <button class="btn" data-act="backup" title="下載所有案件的備份檔">下載備份</button>
-      <button class="btn" data-act="csv">匯出 CSV</button>
-      <button class="btn danger" data-act="delete">刪除案件</button>
+      <details class="menu">
+        <summary class="btn">📁 檔案 ▾</summary>
+        <div class="menu-list">
+          <button class="btn ghost" data-act="import">匯入案件／備份</button>
+          <button class="btn ghost" data-act="export">匯出本案 JSON</button>
+          <button class="btn ghost" data-act="backup" title="下載所有案件的備份檔">下載備份（全部案件）</button>
+          <button class="btn ghost" data-act="csv">匯出 CSV</button>
+          <button class="btn ghost danger" data-act="delete">刪除本案</button>
+        </div>
+      </details>
+      <button class="btn" data-act="rules" title="收費標準第 6 條、附表一、會議紀錄">📖 相關規定</button>
+      <button class="btn" data-act="copy" title="複製文字明細，貼到公文或簽稿">📄 複製明細</button>
+      <button class="btn" data-act="theme" id="themeBtn">☀ 淺色</button>
       <button class="btn" data-act="notify" id="notifyBtn" title="有新版本時跳出桌面通知">🔔 更新通知</button>
       <button class="btn primary" data-act="print">🖨 列印清冊（1式2份）</button>
       <input type="file" id="importFile" accept=".json,application/json" hidden>
@@ -59,6 +67,20 @@
           <label>承辦人
             <input data-f="clerk">
           </label>
+          <label class="switch wide">
+            <input type="checkbox" data-f="feeAuto">
+            <span class="track"></span>
+            依分割前地號面積與線段數自動計算規費（附表一項次四）
+          </label>
+          <div id="autoFee" class="wide autofee reveal" hidden>
+            <div class="table-wrap"><table class="tbl" id="preTbl"></table></div>
+            <div class="row-gap">
+              <button class="btn ghost sm" data-act="addPre">＋ 新增分割前地號</button>
+              <label class="inline">分割線段數 <input data-f="lines" inputmode="numeric" class="short" placeholder="0"></label>
+              <span class="muted small">每條 500 元</span>
+            </div>
+            <p class="small muted" id="preSum"></p>
+          </div>
           <label>基本費（全案，元）
             <input data-f="baseFee" inputmode="numeric">
           </label>
@@ -132,6 +154,62 @@
     <span id="footVer"></span> · 資料僅儲存在本機瀏覽器 · <a href="https://github.com/gn01918004-hub/courtPartition-" target="_blank" rel="noopener">GitHub</a>
   </footer>
 </div>
+
+<dialog id="pdlg" class="vdlg" aria-labelledby="pTitle">
+  <div class="dlg-head">
+    <h2 id="pTitle">貼上名單 <small class="muted" id="pTarget"></small></h2>
+    <button class="btn sm" data-close>取消</button>
+  </div>
+  <div class="dlg-body">
+    <p class="small muted" style="margin:0">可直接貼上判決書主文、Excel 表格（姓名、分母、分子）或逐行「姓名 持分」。看得懂：1/4、4分之1、四分之一、萬分之二三四五、「甲、乙各四分之一」、「甲、乙、丙公同共有二分之一」、「單獨所有」。</p>
+    <textarea id="pText" rows="7" placeholder="例：&#10;分歸被告劉玉英、劉玉美按應有部分各二分之一維持共有&#10;王小明　1/4&#10;陳甲、陳乙公同共有四分之一"></textarea>
+    <div id="pPreview"></div>
+  </div>
+  <div class="dlg-foot">
+    <span class="muted small" id="pCount"></span>
+    <div class="row-gap">
+      <button class="btn" id="pAppend">加在後面</button>
+      <button class="btn primary" id="pReplace">取代目前名單</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="rdlg" class="vdlg" aria-labelledby="rTitle">
+  <div class="dlg-head">
+    <h2 id="rTitle">相關規定</h2>
+    <button class="btn sm" data-close>關閉 Esc</button>
+  </div>
+  <div class="dlg-body rules">
+    <section>
+      <h3>土地複丈費及建築改良物測量費收費標準 第 6 條</h3>
+      <p class="small muted">112.1.13 台內地字第 1120260117 號令修正，112.5.1 施行</p>
+      <p>登記機關受理下列複丈，得依已核定之測量成果辦理，無需實地測量者，依本標準規定之收費數額半數計收：</p>
+      <ol><li>依法院確定判決書或與法院確定判決有同一效力之證明文件所申請之複丈。</li>
+        <li>依直轄市縣（市）不動產糾紛調處委員會設置及調處辦法作成調處確定結果所申請之複丈。</li></ol>
+    </section>
+    <section>
+      <h3>附表一 項次四 土地分割複丈費</h3>
+      <table class="tbl"><thead><tr><th>分割前每筆地號面積</th><th class="num">基本費</th></tr></thead><tbody>
+        <tr><td>未滿 200 ㎡</td><td class="num">1,500</td></tr><tr><td>200 以上未滿 1,000 ㎡</td><td class="num">2,000</td></tr>
+        <tr><td>1,000 以上未滿 10,000 ㎡</td><td class="num">2,500</td></tr><tr><td>10,000 ㎡ 以上</td><td class="num">3,000</td></tr></tbody></table>
+      <ul><li>基本費以分割前每筆地號面積為單位；施測費以線段為單位，每線段 500 元。</li>
+        <li>附註二：線段指複丈時施測經界或範圍之直線段或圓弧線段；因地籍圖圖幅管理致線段需切分，不得重複計數。</li>
+        <li>附註三：申請人未能埋設界標一併申請確定界址點者，每界址點加繳 200 元。</li></ul>
+    </section>
+    <section>
+      <h3>114.7.17 部分共有人申辦共有物分割複丈收費原則 會議紀錄 議題二</h3>
+      <ol><li>分割證明文件已載明複丈費繳納方式或申請人願繳納全額者，依其所載。</li>
+        <li>各宗土地應徵之分割複丈規費（基本費及施測費）依分割後土地筆數均分，由分割後土地所有權人繳納；維持共有者再依持分比例分算。</li>
+        <li>計算採無條件捨去法至整數，餘數由申請人繳納；確定分割界址點費用由申請人繳納。</li>
+        <li>未會同申請之共有人，依內政部 90.6.22 台（90）內地字第 9073215 號函註記欠繳複丈費。</li></ol>
+    </section>
+    <section>
+      <h3>兼具分別共有及公同共有</h3>
+      <p>分別共有之共有人死亡、繼承人未辦理繼承登記時，該土地即兼具分別共有及公同共有。分割共有物訴訟可合併請求繼承登記，判決時通常對被繼承人之應有部分保持公同共有。<span class="small muted">（南投縣竹山地政事務所 114 年度專題報告〈共有土地分割之探討〉）</span></p>
+      <p>本清冊輸入方式：公同共有的一組寫成<b>一列</b>（如「甲、乙、丙（公同共有）」），同一人另有分別共有持分時另列一列，系統會分開計算。</p>
+    </section>
+  </div>
+</dialog>
 
 <dialog id="vdlg" class="vdlg" aria-labelledby="vTitle">
   <div class="dlg-head">

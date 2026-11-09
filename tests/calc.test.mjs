@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
 const require = createRequire(import.meta.url);
-const { compute, sumShares } = require('../assets/calc.js');
+const { compute, sumShares, parseShare, parseRoster, splitFee, toChineseAmount } = require('../assets/calc.js');
 
 const owners = (list) => list.map(([name, num, den]) => ({ name, num, den }));
 
@@ -152,6 +152,49 @@ test('公同共有群組列與同一人的分別共有列不合併', () => {
   assert.deepEqual(r.parcels[0].rows.map((x) => [x.due, x.mergedTo]), [[500, 0], [500, 0]]);
   assert.equal(r.people.length, 2);
   assert.ok(!r.warnings.some((w) => w.msg.includes('已合併')));
+});
+
+test('持分文字解析', () => {
+  const cases = { '1/4': [1, 4], '４分之１': [1, 4], '四分之一': [1, 4], '萬分之二三四五': [2345, 10000],
+    '一萬分之二千三百四十五': [2345, 10000], '三百六十分之二十七': [27, 360], '權利範圍：1／8': [1, 8], '全部': [1, 1] };
+  for (const [t, [n, d]] of Object.entries(cases)) assert.deepEqual(parseShare(t), { num: n, den: d }, t);
+  assert.equal(parseShare('abc'), null);
+  assert.equal(parseShare('1/'), null);
+});
+
+test('貼上名單：判決書主文、各、公同共有、單獨所有、Excel', () => {
+  const { rows, skipped } = parseRoster([
+    '分歸被告劉玉英、劉玉美按應有部分各四分之一維持共有',
+    '原告劉玉春應有部分二分之一',
+    '陳甲、陳乙、陳丙公同共有八分之一',
+    '分歸被告張三單獨所有',
+    '李四\t4\t1',
+    '看不懂的一行',
+  ].join('\n'));
+  assert.deepEqual(rows.map((r) => [r.name, `${r.num}/${r.den}`]), [
+    ['劉玉英', '1/4'], ['劉玉美', '1/4'], ['劉玉春', '1/2'],
+    ['陳甲、陳乙、陳丙（公同共有）', '1/8'], ['張三', '1/1'], ['李四', '1/4'],
+  ]);
+  assert.deepEqual(skipped, ['看不懂的一行']);
+});
+
+test('依分割前地號面積與線段自動計算規費（附表一項次四）', () => {
+  const f = splitFee([{ area: 150 }, { area: '1,200' }, { landNo: '9', tier: 3, qty: 2 }, { area: 200 }, { landNo: '', tier: 2 }], 5);
+  assert.deepEqual(f.rows.map((r) => r.fee), [1500, 2500, 6000, 2000, 0]); // 最後一列空白不計
+  assert.equal(f.base, 12000);
+  assert.equal(f.survey, 2500);
+  const r = compute({ feeAuto: true, preParcels: [{ area: 500 }], lines: 3, courtBased: true, applicant: '甲',
+    parcels: [{ landNo: '1', owners: owners([['甲', 1, 1]]) }] });
+  assert.equal(r.base, 2000);
+  assert.equal(r.survey, 1500);
+  assert.equal(r.fee, 1750);
+});
+
+test('金額大寫', () => {
+  assert.equal(toChineseAmount(2250), '貳仟貳佰伍拾元整');
+  assert.equal(toChineseAmount(10005), '壹萬零伍元整');
+  assert.equal(toChineseAmount(1050), '壹仟零伍拾元整');
+  assert.equal(toChineseAmount(500.5), '伍佰元伍角');
 });
 
 test('version.json 與 changelog 最新版本一致', () => {

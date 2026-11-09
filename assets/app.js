@@ -15,13 +15,24 @@
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const money = (n) => (Number.isFinite(n) ? n.toLocaleString('zh-TW', { maximumFractionDigits: 2 }) : '—');
   const uid = () => Math.random().toString(36).slice(2, 10);
-  const blankOwner = () => ({ name: '', den: '', num: '', note: '' });
+  const blankOwner = () => ({ name: '', share: '', den: '', num: '', note: '' });
+  const blankPre = () => ({ landNo: '', area: '', tier: 0, qty: 1 });
+  const shareText = (o) => (o.num !== '' && o.den !== '' && o.num != null && o.den != null ? `${o.num}/${o.den}` : '');
+  // 持分欄：解析「1/4」「四分之一」等，同步存回分母／分子
+  function setShare(o, text) {
+    o.share = text;
+    const sh = Calc.parseShare(text);
+    o.den = sh ? sh.den : '';
+    o.num = sh ? sh.num : '';
+    return sh;
+  }
   const blankParcel = () => ({ landNo: '', owners: [blankOwner()] });
   const rocDate = (d = new Date()) => `中華民國 ${d.getFullYear() - 1911} 年 ${d.getMonth() + 1} 月 ${d.getDate()} 日`;
 
   function newCase() {
     return {
       id: uid(), caseNo: '', receiptNo: '', clerk: '',
+      feeAuto: true, preParcels: [blankPre()], lines: '',
       baseFee: '', surveyFee: '', pointCount: '', courtBased: true, needSurvey: false,
       parcels: [blankParcel()], persons: {}, applicant: '',
       updatedAt: Date.now(),
@@ -30,10 +41,10 @@
 
   function sampleCase() {
     // 與 Excel v2.1 清冊範例相同
-    const owners = ['劉玉英', '劉玉美', '劉玉春', '劉筱帆'].map((name) => ({ name, den: 4, num: 1, note: '' }));
+    const owners = ['劉玉英', '劉玉美', '劉玉春', '劉筱帆'].map((name) => ({ name, share: '1/4', den: 4, num: 1, note: '' }));
     return Object.assign(newCase(), {
       caseNo: '（範例）114年度訴字第0000號', receiptNo: '114年通數土字第00000號',
-      baseFee: 3000, surveyFee: 1500, courtBased: true, needSurvey: false, applicant: '劉玉美',
+      feeAuto: false, baseFee: 3000, surveyFee: 1500, courtBased: true, needSurvey: false, applicant: '劉玉美',
       parcels: [{ landNo: '566', owners }],
       persons: { '劉玉美': { paid: 3500, note: '' } },
     });
@@ -52,6 +63,11 @@
       if (Number(c.pointFee) > 0) c.needSurvey = true; // 有界址點即需實地作業
     }
     delete c.halve; delete c.roundMode; delete c.remainderTo; delete c.pointFee;
+    // v3.5：持分改為單一欄位；規費可依分割前地號自動計算（舊案件已填金額者維持手動）
+    (c.parcels || []).forEach((p) => (p.owners || []).forEach((o) => { if (o.share === undefined) o.share = shareText(o); }));
+    if (c.feeAuto === undefined) c.feeAuto = !(Number(c.baseFee) || Number(c.surveyFee));
+    if (!Array.isArray(c.preParcels) || !c.preParcels.length) c.preParcels = [blankPre()];
+    if (c.lines === undefined) c.lines = '';
     Object.values(c.persons || {}).forEach((v) => v && delete v.applicant);
     return c;
   }
@@ -118,20 +134,20 @@
           <span class="chip" data-share="${pi}"></span>
           <span class="subtotal">小計 <b data-psum="${pi}">0</b> 元</span>
           <div class="pact">
+            <button class="btn ghost sm" data-act="paste" title="從判決書、Excel 貼上姓名與持分">📋 貼上名單</button>
             ${pi > 0 ? '<button class="btn ghost sm" data-act="copyPrev" title="複製上一筆的共有人名單">⧉ 沿用上一筆名單</button>' : ''}
             <button class="btn ghost sm danger" data-act="delParcel" title="刪除此筆">刪除</button>
           </div>
         </header>
         <div class="table-wrap">
           <table class="tbl">
-            <thead><tr><th class="n">#</th><th>共有人姓名</th><th class="num">分母</th><th class="num">分子</th><th class="num">應繳測量費</th><th>備註</th><th></th></tr></thead>
+            <thead><tr><th class="n">#</th><th>共有人姓名</th><th>持分</th><th class="num">應繳測量費</th><th>備註</th><th></th></tr></thead>
             <tbody>
               ${p.owners.map((o, oi) => `
               <tr data-oi="${oi}">
                 <td class="n">${oi + 1}</td>
                 <td><input data-o="name" value="${esc(o.name)}" placeholder="姓名（公同共有請寫在同一列）" list="nameList"></td>
-                <td class="num"><input data-o="den" value="${esc(o.den)}" inputmode="numeric" class="short"></td>
-                <td class="num"><input data-o="num" value="${esc(o.num)}" inputmode="numeric" class="short"></td>
+                <td><input data-o="share" value="${esc(o.share)}" placeholder="1/4、四分之一" class="share ${o.share && o.den === '' ? 'bad' : ''}"></td>
                 <td class="num due" data-due="${pi}-${oi}">0</td>
                 <td><input data-o="note" value="${esc(o.note)}"></td>
                 <td><button class="btn icon sm" data-act="delOwner" aria-label="刪除此列">✕</button></td>
@@ -150,7 +166,11 @@
     if (!card) return;
     const p = cur().parcels[+card.dataset.pi];
     if (el.dataset.p) p[el.dataset.p] = el.value;
-    if (el.dataset.o) p.owners[+el.closest('tr').dataset.oi][el.dataset.o] = el.value;
+    if (el.dataset.o) {
+      const o = p.owners[+el.closest('tr').dataset.oi];
+      if (el.dataset.o === 'share') el.classList.toggle('bad', !!el.value.trim() && !setShare(o, el.value));
+      else o[el.dataset.o] = el.value;
+    }
     save();
     refresh();
   }
@@ -169,7 +189,7 @@
       case 'delOwner': {
         const oi = +btn.closest('tr').dataset.oi;
         const o = p.owners[oi];
-        if ((o.name || o.den || o.num) && !confirm(`確定刪除「${o.name || '此列'}」？`)) return;
+        if ((o.name || o.share) && !confirm(`確定刪除「${o.name || '此列'}」？`)) return;
         p.owners.splice(oi, 1);
         if (!p.owners.length) p.owners.push(blankOwner());
         break;
@@ -178,6 +198,9 @@
         if (hasData(p) && !confirm('此筆已有資料，確定以上一筆的名單覆蓋？')) return;
         p.owners = c.parcels[pi - 1].owners.map((o) => ({ ...o, note: '' }));
         break;
+      case 'paste':
+        openPaste(pi);
+        return;
       case 'delParcel':
         if (hasData(p) && !confirm(`確定刪除第 ${pi + 1} 筆（地號 ${p.landNo || '未填'}）？`)) return;
         c.parcels.splice(pi, 1);
@@ -188,7 +211,7 @@
     renderParcels();
   }
 
-  const hasData = (p) => !!(String(p.landNo).trim() || p.owners.some((o) => o.name || o.den || o.num));
+  const hasData = (p) => !!(String(p.landNo).trim() || p.owners.some((o) => o.name || o.share));
 
   function applyCount(n) {
     const c = cur();
@@ -209,11 +232,137 @@
     renderParcels();
   }
 
+  // ---------- 分割前地號（自動計算基本費） ----------
+  function renderPre() {
+    const c = cur();
+    $('#preTbl').innerHTML = `
+      <thead><tr><th>分割前地號</th><th class="num">面積（㎡，選填）</th><th>面積級距</th><th class="num">筆數</th><th class="num">基本費</th><th></th></tr></thead>
+      <tbody>${c.preParcels.map((r, i) => `
+        <tr data-ri="${i}">
+          <td><input data-r="landNo" value="${esc(r.landNo)}" placeholder="例：566"></td>
+          <td class="num"><input data-r="area" value="${esc(r.area)}" inputmode="decimal" class="short" placeholder="自動分級"></td>
+          <td><select data-r="tier">${Calc.TIERS.map((t, k) => `<option value="${k}">${t}</option>`).join('')}</select></td>
+          <td class="num"><input data-r="qty" value="${esc(r.qty)}" inputmode="numeric" class="short"></td>
+          <td class="num due" data-pre="${i}">0</td>
+          <td><button class="btn icon sm" data-act="delPre" aria-label="刪除此列">✕</button></td>
+        </tr>`).join('')}</tbody>`;
+  }
+  function onPreInput(e) {
+    const el = e.target, tr = el.closest('tr[data-ri]');
+    if (!tr || !el.dataset.r) return;
+    cur().preParcels[+tr.dataset.ri][el.dataset.r] = el.value;
+    save();
+    refresh();
+  }
+  function onPreClick(e) {
+    const act = e.target.closest('[data-act]')?.dataset.act;
+    const c = cur();
+    if (act === 'addPre') c.preParcels.push(blankPre());
+    else if (act === 'delPre') {
+      c.preParcels.splice(+e.target.closest('tr').dataset.ri, 1);
+      if (!c.preParcels.length) c.preParcels.push(blankPre());
+    } else return;
+    save();
+    renderPre();
+    refresh();
+  }
+
+  // ---------- 貼上名單 ----------
+  let pasteTarget = 0, pasteRows = [];
+  function openPaste(pi) {
+    pasteTarget = pi;
+    const p = cur().parcels[pi];
+    $('#pTarget').textContent = `第 ${pi + 1} 筆${p.landNo ? `（地號 ${p.landNo}）` : ''}`;
+    $('#pText').value = '';
+    previewPaste();
+    $('#pdlg').showModal();
+    $('#pText').focus();
+  }
+  function previewPaste() {
+    const { rows, skipped } = Calc.parseRoster($('#pText').value);
+    pasteRows = rows;
+    $('#pPreview').innerHTML = rows.length || skipped.length ? `
+      ${rows.length ? `<table class="tbl"><thead><tr><th class="n">#</th><th>姓名</th><th>持分</th></tr></thead><tbody>
+        ${rows.map((r, i) => `<tr><td class="n">${i + 1}</td><td>${esc(r.name)}</td><td>${r.num}/${r.den}</td></tr>`).join('')}</tbody></table>` : ''}
+      ${skipped.length ? `<p class="small muted">看不懂、已略過 ${skipped.length} 行：${skipped.map((x) => `「${esc(x.slice(0, 30))}」`).join('、')}</p>` : ''}` : '';
+    $('#pCount').textContent = rows.length ? `辨識出 ${rows.length} 位，請核對後套用` : '';
+    $('#pReplace').disabled = $('#pAppend').disabled = !rows.length;
+  }
+  function applyPaste(replace) {
+    const p = cur().parcels[pasteTarget];
+    const owners = pasteRows.map((r) => ({ name: r.name, share: `${r.num}/${r.den}`, den: r.den, num: r.num, note: r.note || '' }));
+    const keep = p.owners.filter((o) => o.name || o.share);
+    p.owners = replace ? owners : [...keep, ...owners];
+    $('#pdlg').close();
+    save();
+    renderParcels();
+    toast(`已${replace ? '套用' : '加入'} ${owners.length} 位共有人`);
+  }
+
+  // ---------- 複製明細（貼到公文、簽稿） ----------
+  function buildCopyText() {
+    const c = cur(), r = Calc.compute(c);
+    const L = [];
+    L.push('共有物分割土地複丈費分擔明細');
+    L.push(`案號：${c.caseNo || '—'}　收件字號：${c.receiptNo || '—'}`);
+    L.push(`規費：基本費 ${money(r.base)} 元＋施測費 ${money(r.survey)} 元＝${money(r.grossFee)} 元，${r.halved ? '依收費標準第 6 條半數計收' : '原價計收'} ${money(r.fee)} 元（新臺幣${Calc.toChineseAmount(r.fee)}）`);
+    L.push(`分割後 ${r.N} 筆，每筆均分 ${money(r.perParcel)} 元，依持分分算後無條件捨去，差額 ${money(r.remainder)} 元由申請人負擔${r.pointFee ? `；確定界址點 ${r.pointCount} 點計 ${money(r.pointFee)} 元由申請人負擔` : ''}。`);
+    r.parcels.forEach((pr) => {
+      L.push(`地號 ${pr.landNo || '（未填）'}：${pr.rows.filter((x) => !x.mergedTo && x.name).map((x) => `${x.name} ${x.shareN}/${x.shareD} 應繳 ${money(x.due)} 元`).join('；')}`);
+    });
+    L.push('各共有人：');
+    r.people.forEach((p) => {
+      const extra = p.remainder || p.pointFee ? `（含差額${p.pointFee ? '及界址點費用' : ''} ${money(p.remainder + p.pointFee)} 元）` : '';
+      const tail = p.over ? `，溢繳 ${money(p.over)} 元` : p.owe ? `，${p.status} ${money(p.owe)} 元` : '，已繳清';
+      L.push(`${p.name}${p.isApplicant ? '（申請人）' : ''} 應繳 ${money(p.total)} 元${extra}，已繳 ${money(p.paid)} 元${tail}`);
+    });
+    return L.join('\n');
+  }
+  async function copyText(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (e) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+    }
+    toast('已複製明細，可直接貼到公文或簽稿');
+  }
+
+  // ---------- 深色／淺色 ----------
+  const THEME_KEY = 'courtPartition.theme';
+  function setTheme(t) {
+    document.documentElement.dataset.theme = t;
+    const b = $('#themeBtn');
+    if (b) b.textContent = t === 'light' ? '🌙 深色' : '☀ 淺色';
+    try { localStorage.setItem(THEME_KEY, t); } catch (e) { /* 略過 */ }
+  }
+
   // ---------- 計算與畫面更新 ----------
   let last;
   function refresh() {
     const c = cur();
     const r = (last = Calc.compute(c));
+
+    // 規費：自動計算時，基本費／施測費欄顯示計算結果且不可修改
+    $('#autoFee').hidden = !c.feeAuto;
+    [['baseFee', r.base], ['surveyFee', r.survey]].forEach(([k, v]) => {
+      const el = $(`[data-f="${k}"]`);
+      el.readOnly = !!c.feeAuto;
+      if (document.activeElement !== el) el.value = c.feeAuto ? v : c[k] ?? '';
+    });
+    if (r.auto) {
+      r.auto.rows.forEach((row, i) => {
+        const td = $(`[data-pre="${i}"]`);
+        if (td) td.textContent = money(row.fee);
+        const sel = $(`#preTbl tr[data-ri="${i}"] [data-r="tier"]`);
+        if (sel) { sel.value = row.tier; sel.disabled = row.area != null; }
+      });
+      $('#preSum').textContent = `基本費 ${money(r.auto.base)} ＋ 施測費 ${money(r.auto.survey)}（${r.auto.lines} 線 × ${Calc.SPLIT_LINE}）`;
+    }
 
     // 地號卡片計算值
     r.parcels.forEach((pr, pi) => {
@@ -247,7 +396,7 @@
     // KPI
     $('#kpis').innerHTML = [
       ['規費合計', r.grossFee, `基本費 ${money(r.base)} + 施測費 ${money(r.survey)}`],
-      [r.halved ? '減半後應徵' : '應徵規費（原價）', r.fee, r.halved ? '收費標準第 6 條半數計收' : '不適用減半'],
+      [r.halved ? '減半後應徵' : '應徵規費（原價）', r.fee, `${r.halved ? '第 6 條半數計收' : '不適用減半'}・${Calc.toChineseAmount(r.fee)}`],
       ['每筆均分', r.perParcel, `÷ 分割後 ${r.N} 筆`],
       ['已分配', r.allocated, '各共有人應繳合計'],
       ['差額（申請人）', r.remainder, r.applicant ? `由 ${r.applicant} 負擔` : '尚未指定申請人', 'accent'],
@@ -384,6 +533,7 @@
         <tr><th>基本費</th><th>施測費</th><th>合計</th><th>${r.halved ? '規費減半' : '應徵規費(原價)'}</th><th>分割後筆數</th><th>每筆均分</th><th>已分配</th><th>差額（申請人）</th>${c.needSurvey ? '<th>界址點費用</th>' : ''}</tr>
         <tr><td>${money(r.base)}</td><td>${money(r.survey)}</td><td>${money(r.grossFee)}</td><td>${money(r.fee)}</td><td>${r.N}</td>
         <td>${money(r.perParcel)}</td><td>${money(r.allocated)}</td><td>${money(r.remainder)}</td>${c.needSurvey ? `<td>${money(r.pointFee)}<br><small>${r.pointCount}點</small></td>` : ''}</tr>
+        <tr><td colspan="${c.needSurvey ? 9 : 8}" class="cn">應徵規費新臺幣 ${Calc.toChineseAmount(r.fee)}${r.pointFee ? `，另確定界址點費用新臺幣 ${Calc.toChineseAmount(r.pointFee)}` : ''}${r.auto ? `　（基本費：分割前地號 ${r.auto.rows.map((x) => `${esc(x.landNo || '—')} ${Calc.TIERS[x.tier]}${x.qty > 1 ? '×' + x.qty : ''}`).join('、')}；施測費：${r.auto.lines} 線段）` : ''}</td></tr>
       </table>`;
 
     const copy = (cp) => `
@@ -608,12 +758,14 @@
   // ---------- 啟動 ----------
   function loadCurrent() {
     fillForm();
+    renderPre();
     renderCaseSelect();
     renderParcels();
   }
 
   function onToolbar(e) {
     const act = e.target.closest('[data-act]')?.dataset.act;
+    if (act) e.target.closest('details')?.removeAttribute('open'); // 選完就收起選單
     const c = cur();
     switch (act) {
       case 'new': {
@@ -641,10 +793,19 @@
       }
       case 'print': doPrint(); break;
       case 'notify': enableNotify(); break;
+      case 'rules': $('#rdlg').showModal(); break;
+      case 'copy': copyText(buildCopyText()); break;
+      case 'theme': setTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light'); break;
     }
   }
 
+  document.addEventListener('click', (e) => { // 點選單外面就收起
+    $$('details.menu[open]').forEach((d) => { if (!d.contains(e.target)) d.removeAttribute('open'); });
+  });
   document.addEventListener('DOMContentLoaded', () => {
+    let theme = 'dark';
+    try { theme = localStorage.getItem(THEME_KEY) || 'dark'; } catch (e) { /* 略過 */ }
+    setTheme(theme);
     $('#verTag').textContent = 'v' + APP_VERSION;
     $('#footVer').textContent = `版本 v${APP_VERSION}（${window.CHANGELOG[0].date}）`;
     $('#versionBtn').onclick = openVer;
@@ -680,6 +841,13 @@
     $('#people').addEventListener('input', onPeopleInput);
     $('#people').addEventListener('focusout', () => setTimeout(() => last && !$('#people').contains(document.activeElement) && refresh()));
     $('#applicantSel').onchange = (e) => { cur().applicant = e.target.value; save(); e.target.blur(); refresh(); };
+
+    $('#autoFee').addEventListener('input', onPreInput);
+    $('#autoFee').addEventListener('change', onPreInput);
+    $('#autoFee').addEventListener('click', onPreClick);
+    $('#pText').addEventListener('input', previewPaste);
+    $('#pReplace').onclick = () => applyPaste(true);
+    $('#pAppend').onclick = () => applyPaste(false);
 
     bindForm();
     loadCurrent();

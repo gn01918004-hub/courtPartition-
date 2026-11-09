@@ -307,3 +307,56 @@ a.btn { text-decoration: none; display: inline-block; }
 @media (max-width: 600px) { .vbtn .vlbl { display: none; } }
 .tbl .due small { display: block; font-size: 0.68rem; font-weight: 400; color: var(--violet); }
 .tbl .due.merged { color: var(--muted); }
+
+/* v3.5：自動規費、持分單欄、貼上名單、相關規定 */
+.autofee { border: 1px dashed var(--line-strong); border-radius: 12px; padding: 10px 12px; display: grid; gap: 8px; }
+.autofee .tbl td input { min-width: 4.5em; }
+.autofee select { min-width: 12em; }
+.autofee p { margin: 0; }
+label.inline { display: inline-flex !important; align-items: center; gap: 8px; color: var(--text) !important; }
+input.share { min-width: 7em; width: 9em; font-family: var(--mono); }
+input.bad { border-color: var(--err); box-shadow: 0 0 0 3px rgba(255, 92, 108, 0.15); }
+input[readonly] { opacity: 0.75; border-style: dashed; cursor: default; }
+textarea { font: inherit; color: var(--text); width: 100%; resize: vertical; background: rgba(5, 8, 16, 0.6); border: 1px solid var(--line-strong); border-radius: 10px; padding: 10px 12px; outline: none; }
+textarea:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(56, 225, 255, 0.15); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.rules section { display: grid; gap: 6px; }
+.rules h3 { margin: 0; font-size: 0.95rem; color: var(--cyan); }
+.rules p, .rules ol, .rules ul { margin: 0; font-size: 0.85rem; line-height: 1.75; }
+.rules ol, .rules ul { padding-left: 1.3em; }
+@media print { .ptbl .cn { text-align: left !important; font-size: 9.5pt; } }
+
+/* ================= 淺色模式 ================= */
+:root[data-theme="light"] {
+  --bg: #f4f6fb; --panel: rgba(255, 255, 255, 0.92); --panel-solid: #ffffff;
+  --line: rgba(30, 50, 90, 0.12); --line-strong: rgba(30, 50, 90, 0.24);
+  --text: #18202f; --muted: #5d6880;
+  --cyan: #0a8fb0; --violet: #6151e0; --pink: #d63a7e;
+  --ok: #138a5a; --warn: #b26a00; --err: #cc2e40;
+  color-scheme: light;
+}
+:root[data-theme="light"] body {
+  background: radial-gradient(1200px 600px at 10% -10%, rgba(56, 225, 255, 0.10), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgba(139, 123, 255, 0.10), transparent 60%), var(--bg);
+}
+:root[data-theme="light"] body::before { opacity: 0.15; }
+:root[data-theme="light"] .topbar { background: linear-gradient(to bottom, rgba(244, 246, 251, 0.97), rgba(244, 246, 251, 0.85)); }
+:root[data-theme="light"] input, :root[data-theme="light"] select, :root[data-theme="light"] textarea { background: #fff; }
+:root[data-theme="light"] input::placeholder, :root[data-theme="light"] textarea::placeholder { color: #9aa3b5; }
+:root[data-theme="light"] .card { box-shadow: 0 6px 24px rgba(30, 50, 90, 0.08); }
+:root[data-theme="light"] .kpi, :root[data-theme="light"] .parcel, :root[data-theme="light"] .warnings li,
+:root[data-theme="light"] .vtl details { background: #f8fafd; }
+:root[data-theme="light"] .switch .track { background: #dfe4ee; }
+:root[data-theme="light"] .warnings li.error { color: var(--err); }
+:root[data-theme="light"] .warnings li.warn, :root[data-theme="light"] .halve-note { color: var(--warn); }
+:root[data-theme="light"] .warnings li.ok, :root[data-theme="light"] .halve-note.on { color: var(--ok); }
+:root[data-theme="light"] .vnew ul, :root[data-theme="light"] .vtl ul { color: #34405a; }
+:root[data-theme="light"] .btn.primary, :root[data-theme="light"] .pno, :root[data-theme="light"] .tl-tag { color: #fff; }
+:root[data-theme="light"] dialog::backdrop { background: rgba(20, 30, 50, 0.35); }
+.menu { position: relative; }
+.menu summary { list-style: none; }
+.menu summary::-webkit-details-marker { display: none; }
+.menu-list { position: absolute; top: calc(100% + 6px); left: 0; z-index: 20; display: grid; gap: 2px; min-width: 190px; padding: 6px;
+  background: var(--panel-solid); border: 1px solid var(--line-strong); border-radius: 12px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4); }
+.menu-list .btn { text-align: left; border-color: transparent; }
+.autofee select { min-width: 13.5em; }
