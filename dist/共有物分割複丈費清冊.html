@@ -322,6 +322,8 @@ a.btn { text-decoration: none; display: inline-block; }
 .vtl summary small { margin-left: auto; color: var(--muted); }
 .vtl details[open] summary { margin-bottom: 6px; }
 @media (max-width: 600px) { .vbtn .vlbl { display: none; } }
+.tbl .due small { display: block; font-size: 0.68rem; font-weight: 400; color: var(--violet); }
+.tbl .due.merged { color: var(--muted); }
 
 </style>
 </head>
@@ -471,6 +473,17 @@ a.btn { text-decoration: none; display: inline-block; }
 <script>
 /* 版本時間軸：最新版本放最上面。發布新版時只要在此新增一筆並同步 version.json。 */
 window.CHANGELOG = [
+  {
+    version: '3.4.0',
+    date: '2026-11-09',
+    title: '同一人同一筆地號自動合併持分',
+    highlights: [
+      '同一筆地號內同名的多列，自動合併持分後再無條件捨去（登記上同一人只會登記一次），避免少算 1 元',
+      '合併的列會標示「併入第幾列」，列印與 CSV 只列一次，備註註明原本各列持分',
+      '同名同姓的不同人，在姓名後加註區別即可分開計算',
+      '公同共有群組（如「甲、乙、丙（公同共有）」）與同一人的分別共有列分開計算',
+    ],
+  },
   {
     version: '3.3.0',
     date: '2026-10-27',
@@ -646,11 +659,12 @@ window.CHANGELOG = [
       const owners = p.owners || [];
       if (!owners.length) warnings.push({ level: 'error', msg: `${label} 沒有任何所有權人。`, parcel: pi });
 
-      let parcelDue = 0;
+      // 第一輪：檢查每列，並把同一筆地號內同名的列合併（登記上同一人只會登記一次）
+      const groups = new Map(); // 姓名 → { first, n, d, count }
       const rows = owners.map((o, oi) => {
         const den = toInt(o.den), num = toInt(o.num);
         const name = personKey(o.name);
-        let due = 0, ok = true;
+        let ok = true;
         if (!name) warnings.push({ level: 'warn', msg: `${label} 第 ${oi + 1} 列未填姓名。`, parcel: pi });
         if (!isPosInt(den) || !isNonNegInt(num)) {
           ok = false;
@@ -659,10 +673,36 @@ window.CHANGELOG = [
           ok = false;
           warnings.push({ level: 'error', msg: `${label}「${name}」分子大於分母。`, parcel: pi });
         }
-        // floor( fee / N × num/den )，整數運算
-        if (ok && N) due = Math.floor((feeHalf * num) / (2 * N * den));
-        parcelDue += due;
-        return { name, den, num, due, ok, note: o.note || '' };
+        const row = { name, den, num, due: 0, ok, note: o.note || '', mergedTo: 0, count: 1, shareN: num, shareD: den };
+        if (ok && name) {
+          const g = groups.get(name);
+          if (g) {
+            row.mergedTo = g.first + 1; // 併入第幾列（1 起算）
+            const sn = g.n * BigInt(den) + BigInt(num) * g.d, sd = g.d * BigInt(den), k = bgcd(sn, sd) || 1n;
+            g.n = sn / k; g.d = sd / k; g.count++;
+          } else {
+            groups.set(name, { first: oi, n: BigInt(num), d: BigInt(den), count: 1 });
+          }
+        }
+        return row;
+      });
+
+      // 第二輪：以合併後的持分計算 floor( fee / N × n/d )，整數運算
+      let parcelDue = 0;
+      rows.forEach((row, oi) => {
+        if (!row.ok || !N || row.mergedTo) return;
+        let n = BigInt(row.num), d = BigInt(row.den);
+        const g = row.name && groups.get(row.name);
+        if (g && g.count > 1) {
+          n = g.n; d = g.d;
+          row.count = g.count; row.shareN = String(n); row.shareD = String(d);
+          warnings.push({ level: 'warn', parcel: pi,
+            msg: `${label}「${row.name}」輸入了 ${g.count} 列，已合併為持分 ${n}/${d} 計算。若是同名同姓的不同人，請在姓名後加註區別，例如「${row.name}（A12）」。` });
+        }
+        row.due = Number.isInteger(feeHalf)
+          ? Number((BigInt(feeHalf) * n) / (2n * BigInt(N) * d))
+          : Math.floor((feeHalf * Number(n)) / (2 * N * Number(d)));
+        parcelDue += row.due;
       });
 
       const share = sumShares(owners);
@@ -681,14 +721,14 @@ window.CHANGELOG = [
     const map = new Map();
     for (const pr of parcelResults) {
       for (const r of pr.rows) {
-        if (!r.name) continue;
+        if (!r.name || r.mergedTo) continue;
         if (!map.has(r.name)) {
           map.set(r.name, { due: 0, parcels: [] });
           order.push(r.name);
         }
         const m = map.get(r.name);
         m.due += r.due;
-        m.parcels.push(`${pr.landNo || '?'}(${r.num}/${r.den})`);
+        m.parcels.push(`${pr.landNo || '?'}(${r.shareN}/${r.shareD})`);
       }
     }
 
@@ -968,7 +1008,12 @@ window.CHANGELOG = [
     r.parcels.forEach((pr, pi) => {
       pr.rows.forEach((row, oi) => {
         const td = $(`[data-due="${pi}-${oi}"]`);
-        if (td) td.textContent = row.ok ? money(row.due) : '—';
+        if (!td) return;
+        td.classList.toggle('merged', !!row.mergedTo);
+        if (!row.ok) td.textContent = '—';
+        else if (row.mergedTo) td.innerHTML = `<small>併入第 ${row.mergedTo} 列</small>`;
+        else if (row.count > 1) td.innerHTML = `${money(row.due)}<small>合併 ${row.shareN}/${row.shareD}</small>`;
+        else td.textContent = money(row.due);
       });
       const sum = $(`[data-psum="${pi}"]`);
       if (sum) sum.textContent = money(pr.parcelDue);
@@ -1083,6 +1128,14 @@ window.CHANGELOG = [
       : '<li class="ok">全部檢核通過，可以列印。</li>';
   }
 
+  // 合併後的列：備註併列原本各列的持分，方便核對
+  const mergedNote = (pr, row) => {
+    if (row.count < 2) return row.note;
+    const parts = pr.rows.filter((x) => x.name === row.name && x.ok).map((x) => `${x.num}/${x.den}`);
+    const notes = pr.rows.filter((x) => x.name === row.name && x.note).map((x) => x.note);
+    return [`合併 ${parts.join('＋')}`, ...notes].join('；');
+  };
+
   // ---------- 列印（1式2份） ----------
   function buildPrint() {
     const c = cur();
@@ -1094,8 +1147,8 @@ window.CHANGELOG = [
           <tr><th colspan="5" class="cap">地號：${esc(pr.landNo || '（未填）')}　　持分合計：${pr.shareOk ? '1' : `${pr.share.n}/${pr.share.d}（有誤）`}</th></tr>
           <tr><th style="width:2.2em">#</th><th>共有人姓名</th><th style="width:6em">持分</th><th style="width:7em">應繳測量費</th><th>備註</th></tr>
         </thead>
-        <tbody>${pr.rows.map((row, i) => `
-          <tr><td class="c">${i + 1}</td><td>${esc(row.name)}</td><td class="c">${row.num}/${row.den}</td><td class="r">${money(row.due)}</td><td>${esc(row.note)}</td></tr>`).join('')}
+        <tbody>${pr.rows.filter((row) => !row.mergedTo).map((row, i) => `
+          <tr><td class="c">${i + 1}</td><td>${esc(row.name)}</td><td class="c">${row.shareN}/${row.shareD}</td><td class="r">${money(row.due)}</td><td>${esc(mergedNote(pr, row))}</td></tr>`).join('')}
         </tbody>
         <tfoot><tr><td colspan="3" class="r">小計</td><td class="r">${money(pr.parcelDue)}</td><td></td></tr></tfoot>
       </table>`).join('');
@@ -1172,7 +1225,8 @@ window.CHANGELOG = [
     const r = Calc.compute(cur());
     const q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const lines = [['地號', '共有人姓名', '分母', '分子', '應繳測量費', '備註']];
-    r.parcels.forEach((pr) => pr.rows.forEach((row) => lines.push([pr.landNo, row.name, row.den, row.num, row.due, row.note])));
+    r.parcels.forEach((pr) => pr.rows.filter((row) => !row.mergedTo)
+      .forEach((row) => lines.push([pr.landNo, row.name, row.shareD, row.shareN, row.due, mergedNote(pr, row)])));
     const pt = cur().needSurvey;
     lines.push([], ['姓名', '身分', '應繳', '差額', ...(pt ? ['界址點費'] : []), '應繳合計', '已繳', '溢繳', '欠繳', '處理', '備註']);
     r.people.forEach((p) => lines.push([p.name, p.isApplicant ? '申請人' : '未會同', p.due, p.remainder, ...(pt ? [p.pointFee] : []), p.total, p.paid, p.over, p.owe, p.status, p.note]));

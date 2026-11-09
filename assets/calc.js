@@ -108,11 +108,12 @@
       const owners = p.owners || [];
       if (!owners.length) warnings.push({ level: 'error', msg: `${label} 沒有任何所有權人。`, parcel: pi });
 
-      let parcelDue = 0;
+      // 第一輪：檢查每列，並把同一筆地號內同名的列合併（登記上同一人只會登記一次）
+      const groups = new Map(); // 姓名 → { first, n, d, count }
       const rows = owners.map((o, oi) => {
         const den = toInt(o.den), num = toInt(o.num);
         const name = personKey(o.name);
-        let due = 0, ok = true;
+        let ok = true;
         if (!name) warnings.push({ level: 'warn', msg: `${label} 第 ${oi + 1} 列未填姓名。`, parcel: pi });
         if (!isPosInt(den) || !isNonNegInt(num)) {
           ok = false;
@@ -121,10 +122,36 @@
           ok = false;
           warnings.push({ level: 'error', msg: `${label}「${name}」分子大於分母。`, parcel: pi });
         }
-        // floor( fee / N × num/den )，整數運算
-        if (ok && N) due = Math.floor((feeHalf * num) / (2 * N * den));
-        parcelDue += due;
-        return { name, den, num, due, ok, note: o.note || '' };
+        const row = { name, den, num, due: 0, ok, note: o.note || '', mergedTo: 0, count: 1, shareN: num, shareD: den };
+        if (ok && name) {
+          const g = groups.get(name);
+          if (g) {
+            row.mergedTo = g.first + 1; // 併入第幾列（1 起算）
+            const sn = g.n * BigInt(den) + BigInt(num) * g.d, sd = g.d * BigInt(den), k = bgcd(sn, sd) || 1n;
+            g.n = sn / k; g.d = sd / k; g.count++;
+          } else {
+            groups.set(name, { first: oi, n: BigInt(num), d: BigInt(den), count: 1 });
+          }
+        }
+        return row;
+      });
+
+      // 第二輪：以合併後的持分計算 floor( fee / N × n/d )，整數運算
+      let parcelDue = 0;
+      rows.forEach((row, oi) => {
+        if (!row.ok || !N || row.mergedTo) return;
+        let n = BigInt(row.num), d = BigInt(row.den);
+        const g = row.name && groups.get(row.name);
+        if (g && g.count > 1) {
+          n = g.n; d = g.d;
+          row.count = g.count; row.shareN = String(n); row.shareD = String(d);
+          warnings.push({ level: 'warn', parcel: pi,
+            msg: `${label}「${row.name}」輸入了 ${g.count} 列，已合併為持分 ${n}/${d} 計算。若是同名同姓的不同人，請在姓名後加註區別，例如「${row.name}（A12）」。` });
+        }
+        row.due = Number.isInteger(feeHalf)
+          ? Number((BigInt(feeHalf) * n) / (2n * BigInt(N) * d))
+          : Math.floor((feeHalf * Number(n)) / (2 * N * Number(d)));
+        parcelDue += row.due;
       });
 
       const share = sumShares(owners);
@@ -143,14 +170,14 @@
     const map = new Map();
     for (const pr of parcelResults) {
       for (const r of pr.rows) {
-        if (!r.name) continue;
+        if (!r.name || r.mergedTo) continue;
         if (!map.has(r.name)) {
           map.set(r.name, { due: 0, parcels: [] });
           order.push(r.name);
         }
         const m = map.get(r.name);
         m.due += r.due;
-        m.parcels.push(`${pr.landNo || '?'}(${r.num}/${r.den})`);
+        m.parcels.push(`${pr.landNo || '?'}(${r.shareN}/${r.shareD})`);
       }
     }
 

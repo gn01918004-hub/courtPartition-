@@ -305,3 +305,5 @@ a.btn { text-decoration: none; display: inline-block; }
 .vtl summary small { margin-left: auto; color: var(--muted); }
 .vtl details[open] summary { margin-bottom: 6px; }
 @media (max-width: 600px) { .vbtn .vlbl { display: none; } }
+.tbl .due small { display: block; font-size: 0.68rem; font-weight: 400; color: var(--violet); }
+.tbl .due.merged { color: var(--muted); }

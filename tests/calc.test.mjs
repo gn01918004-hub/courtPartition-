@@ -124,6 +124,36 @@ test('界址點費用與錯誤檢核', () => {
   assert.ok(r.warnings.some((w) => w.msg.includes('尚未填寫地號')));
 });
 
+test('同一筆地號同名多列：先合併持分再捨去，只算一次', () => {
+  const r = compute({
+    baseFee: 1002, surveyFee: 0, courtBased: false, applicant: '乙',
+    parcels: [{ landNo: '1', owners: owners([['甲', 1, 4], ['乙', 1, 2], ['甲', 1, 4]]) }],
+  });
+  const [a1, b, a2] = r.parcels[0].rows;
+  // 分開算各為 250.5 → 250＋250＝500；合併 1/2 → 501
+  assert.equal(a1.due, 501);
+  assert.equal(a1.count, 2);
+  assert.equal(`${a1.shareN}/${a1.shareD}`, '1/2');
+  assert.equal(a2.mergedTo, 1);
+  assert.equal(a2.due, 0);
+  assert.equal(b.due, 501);
+  assert.equal(r.remainder, 0);
+  const jia = r.people.find((p) => p.name === '甲');
+  assert.equal(jia.due, 501);
+  assert.deepEqual(jia.parcels, ['1(1/2)']);
+  assert.ok(r.warnings.some((w) => w.msg.includes('已合併為持分 1/2')));
+});
+
+test('公同共有群組列與同一人的分別共有列不合併', () => {
+  const r = compute({
+    baseFee: 1000, surveyFee: 0, courtBased: false, applicant: '甲',
+    parcels: [{ landNo: '1', owners: owners([['甲', 1, 2], ['甲、乙、丙（公同共有）', 1, 2]]) }],
+  });
+  assert.deepEqual(r.parcels[0].rows.map((x) => [x.due, x.mergedTo]), [[500, 0], [500, 0]]);
+  assert.equal(r.people.length, 2);
+  assert.ok(!r.warnings.some((w) => w.msg.includes('已合併')));
+});
+
 test('version.json 與 changelog 最新版本一致', () => {
   const ctx = { window: {} };
   vm.runInNewContext(readFileSync(new URL('../assets/changelog.js', import.meta.url), 'utf8'), ctx);

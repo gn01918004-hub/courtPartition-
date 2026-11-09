@@ -219,7 +219,12 @@
     r.parcels.forEach((pr, pi) => {
       pr.rows.forEach((row, oi) => {
         const td = $(`[data-due="${pi}-${oi}"]`);
-        if (td) td.textContent = row.ok ? money(row.due) : '—';
+        if (!td) return;
+        td.classList.toggle('merged', !!row.mergedTo);
+        if (!row.ok) td.textContent = '—';
+        else if (row.mergedTo) td.innerHTML = `<small>併入第 ${row.mergedTo} 列</small>`;
+        else if (row.count > 1) td.innerHTML = `${money(row.due)}<small>合併 ${row.shareN}/${row.shareD}</small>`;
+        else td.textContent = money(row.due);
       });
       const sum = $(`[data-psum="${pi}"]`);
       if (sum) sum.textContent = money(pr.parcelDue);
@@ -334,6 +339,14 @@
       : '<li class="ok">全部檢核通過，可以列印。</li>';
   }
 
+  // 合併後的列：備註併列原本各列的持分，方便核對
+  const mergedNote = (pr, row) => {
+    if (row.count < 2) return row.note;
+    const parts = pr.rows.filter((x) => x.name === row.name && x.ok).map((x) => `${x.num}/${x.den}`);
+    const notes = pr.rows.filter((x) => x.name === row.name && x.note).map((x) => x.note);
+    return [`合併 ${parts.join('＋')}`, ...notes].join('；');
+  };
+
   // ---------- 列印（1式2份） ----------
   function buildPrint() {
     const c = cur();
@@ -345,8 +358,8 @@
           <tr><th colspan="5" class="cap">地號：${esc(pr.landNo || '（未填）')}　　持分合計：${pr.shareOk ? '1' : `${pr.share.n}/${pr.share.d}（有誤）`}</th></tr>
           <tr><th style="width:2.2em">#</th><th>共有人姓名</th><th style="width:6em">持分</th><th style="width:7em">應繳測量費</th><th>備註</th></tr>
         </thead>
-        <tbody>${pr.rows.map((row, i) => `
-          <tr><td class="c">${i + 1}</td><td>${esc(row.name)}</td><td class="c">${row.num}/${row.den}</td><td class="r">${money(row.due)}</td><td>${esc(row.note)}</td></tr>`).join('')}
+        <tbody>${pr.rows.filter((row) => !row.mergedTo).map((row, i) => `
+          <tr><td class="c">${i + 1}</td><td>${esc(row.name)}</td><td class="c">${row.shareN}/${row.shareD}</td><td class="r">${money(row.due)}</td><td>${esc(mergedNote(pr, row))}</td></tr>`).join('')}
         </tbody>
         <tfoot><tr><td colspan="3" class="r">小計</td><td class="r">${money(pr.parcelDue)}</td><td></td></tr></tfoot>
       </table>`).join('');
@@ -423,7 +436,8 @@
     const r = Calc.compute(cur());
     const q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const lines = [['地號', '共有人姓名', '分母', '分子', '應繳測量費', '備註']];
-    r.parcels.forEach((pr) => pr.rows.forEach((row) => lines.push([pr.landNo, row.name, row.den, row.num, row.due, row.note])));
+    r.parcels.forEach((pr) => pr.rows.filter((row) => !row.mergedTo)
+      .forEach((row) => lines.push([pr.landNo, row.name, row.shareD, row.shareN, row.due, mergedNote(pr, row)])));
     const pt = cur().needSurvey;
     lines.push([], ['姓名', '身分', '應繳', '差額', ...(pt ? ['界址點費'] : []), '應繳合計', '已繳', '溢繳', '欠繳', '處理', '備註']);
     r.people.forEach((p) => lines.push([p.name, p.isApplicant ? '申請人' : '未會同', p.due, p.remainder, ...(pt ? [p.pointFee] : []), p.total, p.paid, p.over, p.owe, p.status, p.note]));
