@@ -2,7 +2,9 @@
 
 法院判決（和解、調解、調處）共有物分割，部分共有人申辦分割複丈時，計算各共有人應繳土地複丈費，並列印清冊 **1 式 2 份**（第一聯附卷、第二聯移送登記課）。
 
-- **單檔分享版**：[`dist/共有物分割複丈費清冊.html`](dist/) — 一個檔案就能用，可用 Email、LINE、隨身碟傳給同事，雙擊即開（免網路、免安裝）。每個 [Release](../../releases) 也會附上該版本的檔案。
+- **單檔分享版**：[`dist/courtPartition.html`](dist/courtPartition.html) — 一個檔案就能用，可用 Email、LINE、隨身碟傳給同事，雙擊即開（免網路、免安裝）。
+- **入口網下載連結（永遠是最新版）**：https://github.com/gn01918004-hub/courtPartition-/releases/latest/download/courtPartition.html
+  檔名固定為 `courtPartition.html`，版號只顯示在程式內（左上角版本按鈕、頁尾、列印清冊頁尾）。
 - **網頁版**：GitHub Pages `https://gn01918004-hub.github.io/courtPartition-/`
 - **Excel 原始檔**：`excel/共有物分割複丈費計算表_v2.1_原始檔.xlsm`
 - **v2.1 審查報告**：[`docs/REVIEW.md`](docs/REVIEW.md)

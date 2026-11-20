@@ -605,6 +605,15 @@ textarea:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(56, 225, 
 /* 版本時間軸：最新版本放最上面。發布新版時只要在此新增一筆並同步 version.json。 */
 window.CHANGELOG = [
   {
+    version: '3.5.1',
+    date: '2026-11-20',
+    title: '固定下載連結',
+    highlights: [
+      '單檔版檔名固定為 courtPartition.html，版號只顯示在程式內',
+      '入口網可放固定連結，永遠下載最新版；程式內「下載新版」也改用此連結',
+    ],
+  },
+  {
     version: '3.5.0',
     date: '2026-11-09',
     title: '規費自動計算、貼上名單、持分一格輸入',
@@ -1693,7 +1702,7 @@ window.CHANGELOG = [
   // 單檔版讀 GitHub 公開倉庫的 version.json；網頁版讀同站的 version.json
   const SITE = 'https://gn01918004-hub.github.io/courtPartition-/';
   const UPDATE_URL = 'https://raw.githubusercontent.com/gn01918004-hub/courtPartition-/HEAD/version.json';
-  const DOWNLOAD_URL = 'https://github.com/gn01918004-hub/courtPartition-/releases/latest';
+  const DOWNLOAD_URL = 'https://github.com/gn01918004-hub/courtPartition-/releases/latest/download/courtPartition.html';
   const SKIP_KEY = 'courtPartition.updateSkip';
   const STANDALONE = !!window.STANDALONE;
 

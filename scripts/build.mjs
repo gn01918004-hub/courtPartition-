@@ -7,14 +7,14 @@ import { dirname, join } from 'node:path';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => readFileSync(join(root, p), 'utf8');
 
-export const OUT = 'dist/共有物分割複丈費清冊.html';
+export const OUT = 'dist/courtPartition.html'; // 檔名固定，版號只在程式內
 
 // version.json 由 changelog 產生（網頁、單檔版、通知都讀它）
 export function versionJson() {
   const ctx = { window: {} };
   vm.runInNewContext(read('assets/changelog.js'), ctx);
   const { version, date, title, highlights } = ctx.window.CHANGELOG[0];
-  const download = `https://github.com/gn01918004-hub/courtPartition-/releases/download/v${version}/courtPartition_v${version}.html`;
+  const download = 'https://github.com/gn01918004-hub/courtPartition-/releases/latest/download/courtPartition.html'; // 永遠下載最新版
   return JSON.stringify({ version, date, title, items: [...highlights], download }, null, 2) + '\n';
 }
 

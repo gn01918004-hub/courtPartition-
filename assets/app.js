@@ -624,7 +624,7 @@
   // 單檔版讀 GitHub 公開倉庫的 version.json；網頁版讀同站的 version.json
   const SITE = 'https://gn01918004-hub.github.io/courtPartition-/';
   const UPDATE_URL = 'https://raw.githubusercontent.com/gn01918004-hub/courtPartition-/HEAD/version.json';
-  const DOWNLOAD_URL = 'https://github.com/gn01918004-hub/courtPartition-/releases/latest';
+  const DOWNLOAD_URL = 'https://github.com/gn01918004-hub/courtPartition-/releases/latest/download/courtPartition.html';
   const SKIP_KEY = 'courtPartition.updateSkip';
   const STANDALONE = !!window.STANDALONE;
 
